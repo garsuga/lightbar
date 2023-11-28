@@ -1,8 +1,8 @@
-import OPi.GPIO as GPIO
-from orangepi import pi3
+import RPi.GPIO as GPIO
 import time
 import spi
 from PIL import Image
+from functools import reduce
 
 NUM_PIXELS = 144
 
@@ -16,9 +16,6 @@ def gamma_correct(led_val):
     max_val = (1 << 8) - 1.0
     corrected = pow(led_val / max_val, GAMMA_CORRECT_FACTOR) * max_val
     return int(min(255, max(0, corrected)))
-
-spidev = spi.openSPI(device="/dev/spidev1.0", speed=500000)
-GPIO.setmode(pi3.BOARD)
 
 def format_transfer(pixels, brightness=1.0):
     def do_brightness(v, b):
@@ -60,22 +57,60 @@ def show_spi(pixels, device, brightness=1):
     t = tuple(bytes)
     spi.transfer(device, t)
 
-# B G R
-pixels = [[0x00, 0x00, 0x0F] for _ in range(0, NUM_PIXELS)]
+def BLACK(size):
+    return [[0x00, 0x00, 0x00] for _ in range(0, size)]
 
-show_spi(pixels, spidev)
+def WHITE(size):
+    return [[0xFF, 0xFF, 0xFF] for _ in range(0, size)]
 
-def calculate_fps(color_arr, n=600):
+spidev1 = spi.openSPI(device="/dev/spidev0.0", speed=500000)
+spidev2 = spi.openSPI(device="/dev/spidev1.0", speed=500000)
+GPIO.setmode(GPIO.BOARD)
+
+class Lightbar:
+    def __init__(self, size):
+        self.size = size
+    
+    def display(self, pixels, brightness=1):
+        raise "Unimplemented"
+    
+class SingleLightbar(Lightbar):
+    def __init__(self, size, spidev):
+        super().__init__(size)
+        self.spidev = spidev
+    
+    def display(self, pixels, brightness=1):
+        show_spi(pixels, self.spidev, brightness)
+
+class CombinedLightbar(Lightbar):
+    def __init__(self, spidevs):
+        size = reduce(lambda a, i: a + i[1], spidevs, 0)
+        self.spidevs = spidevs
+        super().__init__(size)
+    
+    def display(self, pixels, brightness=1):
+        i = 0
+        for spidev in self.spidevs:
+            spi, l = spidev
+            show_spi(pixels[i:i+l], spi, brightness)
+            i += l
+
+lightbar = CombinedLightbar([(spidev1, NUM_PIXELS), (spidev2, NUM_PIXELS)])
+lightbar1 = SingleLightbar(NUM_PIXELS, spidev1)
+lightbar2 = SingleLightbar(NUM_PIXELS, spidev2)
+
+def calculate_fps(lightbar, color_arr, n=600):
     def create_frame(i):
-        pixels = [[0x00] * 3 for i in range(0, NUM_PIXELS)]
+        pixels = [[0x00] * 3 for i in range(0, lightbar.size)]
         pixels[i] = color_arr
         return pixels
-    frames = [create_frame(i) for i in range(0, NUM_PIXELS)]
+    frames = [create_frame(i) for i in range(0, lightbar.size)]
     start = time.time()
     print(f"start={start}")
     for i in range(0, n):
-        frame = frames[i % NUM_PIXELS]
-        show_spi(frame, spidev)
+        frame = frames[i % lightbar.size]
+        #show_spi(frame, spidev2)
+        lightbar.display(frame)
     end = time.time()
     print(f"end={end}")
     print(f"finished testing")
@@ -84,20 +119,29 @@ def calculate_fps(color_arr, n=600):
     print(f"elapsed time={(elapsed):.2f}")
     print(f"fps={n/elapsed:.2f}")
 
-#calculate_fps([0x00, 0xFF, 0x00])
 
-im = Image.open("img.png")
-(width, height) = im.size
-im = im.resize((int((NUM_PIXELS/height)*width),NUM_PIXELS), Image.Resampling.BICUBIC)
-(width, height) = im.size
-im.save("test.png")
-print(f"width={width}, height={height}")
-data = list(im.getdata())
-start_time = time.time()
-for x in range(0, width):
-    pixels = [data[i] for i in range(x, len(data), width)]
-    show_spi(pixels, spidev, 0.01)
-    time.sleep(.04)
-show_spi([[0x00, 0x00, 0x01] for i in range(0, NUM_PIXELS)], spidev)
-end_time = time.time()
-print(f"elapsed time={end_time-start_time:.2f}")
+calculate_fps(lightbar, [0xFF, 0x00, 0x00], n=600)
+lightbar.display(BLACK(lightbar.size))
+
+def old_run_image():
+    im = Image.open("img.png")
+    (width, height) = im.size
+    im = im.resize((int((NUM_PIXELS/height)*width),NUM_PIXELS), Image.Resampling.BICUBIC)
+    (width, height) = im.size
+    im.save("test.png")
+    print(f"width={width}, height={height}")
+    data = list(im.getdata())
+    start_time = time.time()
+    for x in range(0, width):
+        pixels = [data[i] for i in range(x, len(data), width)]
+        show_spi(pixels, spidev1, 0.01)
+        time.sleep(.04)
+    show_spi([[0x00, 0x00, 0x01] for i in range(0, NUM_PIXELS)], spidev1)
+    end_time = time.time()
+    print(f"elapsed time={end_time-start_time:.2f}")
+
+
+def pillow_scratch():
+    im = Image.open("img.png")
+    im.convert("RGB")
+    # ingest into format we want on api
