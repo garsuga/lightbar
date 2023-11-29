@@ -179,6 +179,8 @@ Move to a new terminal session
 # ONLY USE IF MAKING A NEW WEB SERVER (not cloning this repo)
 # Takes a long time (800 sec) for me
 npx create-react-app lightbar
+cd lightbar
+npm i sass
 ```
 Need to allow port `80` and `3000` for React deployment and testing
 ```bash
