@@ -17,6 +17,12 @@ The hardware is based around a Raspberry Pi Zero 2 W and some Dotstar LED strips
 * 3D printer
 * Soldering iron
 
+## Architecture
+* Python RESTful API for asset management and GPIO control
+* React front-end for user access to assets
+    * This is served on the local network and available through a hotspot created by the PI
+* Physical button for basic LED output controls
+
 ## Findings
 * It is not cheaper than buying one retail
 * There are good reasons retails ones aren't usually as bright (80W power draw)
