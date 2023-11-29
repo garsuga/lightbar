@@ -1,11 +1,13 @@
 import './App.scss';
 import React from 'react';
 
+const logo = require("./logo.svg") as string;
+
 export function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={'./logo.svg'} className="App-logo" alt="logo" />
+        <img src={logo} className="App-logo" alt="logo" />
         <p>
           Edit <code>src/App.js</code> and save to reload.
         </p>
