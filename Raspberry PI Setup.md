@@ -146,6 +146,7 @@ F0 0D
 Python comes installed on Raspbian
 ```bash
 pip install RPi.GPIO
+pip install flask
 ```
 Install [SPI-Py](https://github.com/lthiery/SPI-Py)
 ```bash
