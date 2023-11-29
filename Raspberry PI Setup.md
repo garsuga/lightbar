@@ -17,8 +17,15 @@ SUPPORT_URL="http://www.raspbian.org/RaspbianForums"
 BUG_REPORT_URL="http://www.raspbian.org/RaspbianBugs"
 ```
 
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
 ## Creating Hotspot
-From [this article](https://www.stevemurch.com/setting-up-a-raspberry-pi-for-ad-hoc-networking-tech-note/2022/12)
+**Need to attach ethernet somewhere to the PI or else the steps after are impossible**
+
+Instructions from [this article](https://www.stevemurch.com/setting-up-a-raspberry-pi-for-ad-hoc-networking-tech-note/2022/12)
 ```bash
 sudo apt install hostapd
 
