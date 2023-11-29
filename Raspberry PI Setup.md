@@ -135,7 +135,7 @@ FF FF FF FF FF FF
 DE AD BE EF BA AD
 F0 0D
 ```
-## Setting up Python
+## Setting Up Python
 Python comes installed on Raspbian
 ```bash
 pip install RPi.GPIO
@@ -180,4 +180,11 @@ iptables -I OUTPUT -p tcp --sport 80 -j ACCEPT
 iptables -I INPUT -p tcp --dport 3000 -j ACCEPT
 iptables -I OUTPUT -p tcp --sport 3000 -j ACCEPT
 sudo netfilter-persistent save
+```
+
+## Setting Git User Details
+For if you want to author commits
+```bash
+git config --global user.name "USERNAME"
+git config --global user.email "EMAIL"
 ```
