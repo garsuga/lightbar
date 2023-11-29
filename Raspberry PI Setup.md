@@ -185,10 +185,10 @@ npm install @types/react @types/react-dom
 ```
 Need to allow port `80` and `3000` for React deployment and testing
 ```bash
-iptables -I INPUT -p tcp --dport 80 -j ACCEPT
-iptables -I OUTPUT -p tcp --sport 80 -j ACCEPT
-iptables -I INPUT -p tcp --dport 3000 -j ACCEPT
-iptables -I OUTPUT -p tcp --sport 3000 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -I OUTPUT -p tcp --sport 80 -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 3000 -j ACCEPT
+sudo iptables -I OUTPUT -p tcp --sport 3000 -j ACCEPT
 sudo netfilter-persistent save
 ```
 
