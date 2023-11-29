@@ -181,6 +181,7 @@ Move to a new terminal session
 npx create-react-app lightbar
 cd lightbar
 npm i sass
+npm install @types/react @types/react-dom
 ```
 Need to allow port `80` and `3000` for React deployment and testing
 ```bash
