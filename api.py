@@ -1,4 +1,3 @@
-from io import BytesIO
 from flask import Flask, flash, make_response, redirect, request, send_from_directory, abort, jsonify
 import os
 from pathlib import Path
@@ -6,12 +5,15 @@ import re
 from werkzeug.utils import secure_filename
 from PIL import Image
 import json
+import math
 
 DATA_DIR = Path("./data")
 IMAGES_DIR = Path(DATA_DIR) / "images"
 
 DATA_URL = Path("./data")
 IMAGES_URL = DATA_URL / "images"
+
+SETTINGS_PATH = Path("./") / "lightbar_settings.json"
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -21,29 +23,32 @@ def allowed_image(filename):
     suffixes = Path(filename).suffixes
     return len(suffixes) == 1 and str.lower(suffixes[0]) in ALLOWED_IMAGE_EXTENSIONS
 
+# remove transparency by overlaying image on black
 def remove_transparency(image):
     im_black = Image.new('RGBA', image.size, (0, 0, 0))
 
     im_combined = Image.alpha_composite(im_black, image.convert("RGBA"))
-    im_combined.convert("RGB")
-    return im_combined
+    return im_combined.convert("RGB")
 
-
+# crop a centered square from image
 def crop_square(image):
     if image.height == image.width:
         return image
     if image.height > image.width:
         mid = image.height / 2
-        return image.crop((0, mid + image.width / 2, image.width, mid - image.width / 2))
+        return image.crop((0, 
+                           math.ceil(mid + image.width / 2), 
+                           image.width, 
+                           math.ceil(mid - image.width / 2)))
     mid = image.width / 2
-    return image.crop((mid - image.height / 2, 0, mid + image.height / 2, image.height))
-
-
-app = Flask(__name__)
+    return image.crop((math.ceil(mid - image.height / 2), 
+                       0, 
+                       math.ceil(mid + image.height / 2), 
+                       image.height))
 
 app = Flask(__name__, static_folder='web/build')
 
-# Serve React App
+# Serve React App (static files not beginning in /data)
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
@@ -51,7 +56,8 @@ def index(path):
         return send_from_directory(app.static_folder, path)
     else:
         return send_from_directory(app.static_folder, 'index.html')
-    
+
+# Serve Static Files (/data/<path:path>)
 @app.route(f'/{str(DATA_DIR).replace('\\', '/')}/<path:path>')
 def serve_file(path):
     if path != "" and os.path.exists(DATA_DIR / path):
@@ -62,6 +68,16 @@ any_extension = lambda name: fr'{name}\\..+'
 original_any_ext = any_extension("original")
 thumbnail_any_ext = any_extension("thumbnail")
 
+# Get lightbar settings
+@app.route("/lightbar-settings", methods=["GET"])
+def get_lightbar_settings():
+    settings = None
+    with open(SETTINGS_PATH, "r") as settings_file:
+        settings = json.load(settings_file)
+    return jsonify(settings)
+
+
+# Get images list
 @app.route("/images", methods=["GET"])
 def get_images():
     dirs = os.listdir(IMAGES_DIR)
@@ -75,6 +91,7 @@ def get_images():
     
     return jsonify(all_stats)
 
+# Upload image
 @app.route('/upload-image', methods=["POST"])
 def upload_file():
     if request.method == 'POST':
@@ -129,4 +146,4 @@ def upload_file():
 
 
 if __name__ == '__main__':
-    app.run(use_reloader=True, port=5000, threaded=True)
+    app.run(use_reloader=True, host='0.0.0.0', port=5000, threaded=True)
