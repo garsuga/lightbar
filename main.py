@@ -3,12 +3,18 @@ import time
 import spi
 from PIL import Image
 from functools import reduce
+from pathlib import Path
+import json
 
-NUM_PIXELS = 144
+settings_path = Path("./") / "lightbar_settings.json"
+settings = None
 
-RED_INDEX = 0
-GREEN_INDEX = 1
-BLUE_INDEX = 2
+with open(settings_path, "r") as settings_file:
+    settings = json.load(settings_file)
+
+RED_INDEX = settings['red_index']
+GREEN_INDEX = settings['green_index']
+BLUE_INDEX = settings['blue_index']
 
 # https://github.com/adafruit/Adafruit_CircuitPython_DotStar/issues/21#issue-323774759
 GAMMA_CORRECT_FACTOR = 2.5
@@ -26,19 +32,10 @@ def format_transfer(pixels, brightness=1.0):
     bytes = [0x00, 0x00, 0x00, 0x00]
     for pixel in pixels:
         # begin pixel
-        #spi.transfer(device, (0xFF,))
         bytes.append(0xE0 | max(int(0x1F * brightness), 1))
-        #bytes.append(0xFF)
-        #spi.transfer(device, ((pixel & 0xFF0000) >> 4,))
-        #spi.transfer(device, ((pixel & 0x00FF00) >> 2,))
-        #spi.transfer(device, ((pixel & 0x0000FF),))
-
         bytes.append(do_brightness(pixel[BLUE_INDEX], brightness))
         bytes.append(do_brightness(pixel[GREEN_INDEX], brightness))
         bytes.append(do_brightness(pixel[RED_INDEX], brightness))
-        #bytes.append(pixel[BLUE_INDEX])
-        #bytes.append(pixel[GREEN_INDEX])
-        #bytes.append(pixel[RED_INDEX])
 
     
     f = (len(pixels) + 15) // 16
@@ -63,8 +60,8 @@ def BLACK(size):
 def WHITE(size):
     return [[0xFF, 0xFF, 0xFF] for _ in range(0, size)]
 
-spidev1 = spi.openSPI(device="/dev/spidev0.0", speed=500000)
-spidev2 = spi.openSPI(device="/dev/spidev1.0", speed=500000)
+#spidev1 = spi.openSPI(device="/dev/spidev0.0", speed=500000)
+#spidev2 = spi.openSPI(device="/dev/spidev1.0", speed=500000)
 GPIO.setmode(GPIO.BOARD)
 
 class Lightbar:
@@ -95,9 +92,13 @@ class CombinedLightbar(Lightbar):
             show_spi(pixels[i:i+l], spi, brightness)
             i += l
 
-lightbar = CombinedLightbar([(spidev1, NUM_PIXELS), (spidev2, NUM_PIXELS)])
-lightbar1 = SingleLightbar(NUM_PIXELS, spidev1)
-lightbar2 = SingleLightbar(NUM_PIXELS, spidev2)
+
+def create_lightbar(settings):
+    devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
+    return CombinedLightbar([(device, settings['num_pixels_each']) for device in devices])
+#lightbar = CombinedLightbar([(spidev1, settings['num_pixels_each']), (spidev2, settings['num_pixels_each'])])
+
+lightbar = create_lightbar(settings)
 
 def calculate_fps(lightbar, color_arr, n=600):
     def create_frame(i):
