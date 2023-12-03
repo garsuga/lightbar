@@ -124,9 +124,9 @@ def _encode_pixels(image, settings, brightness):
     r,g,b,a = image.split()
     new_channels = [None, None, None, None]
     new_channels[0] = Image.new('L', image.size, math.ceil(brightness * 255))
-    new_channels[settings['red_index'] + 1] = r
-    new_channels[settings['green_index'] + 1] = g
-    new_channels[settings['blue_index'] + 1] = b
+    new_channels[settings['redIndex'] + 1] = r
+    new_channels[settings['greenIndex'] + 1] = g
+    new_channels[settings['blueIndex'] + 1] = b
     return Image.merge("RGBA", new_channels)
 
 # https://stackoverflow.com/questions/7877282/how-to-send-image-generated-by-pil-to-browser
@@ -173,7 +173,7 @@ def format_image(image_name, resampling, brightness):
     settings = _get_lightbar_settings()
     image = _get_image_original(image_name)
 
-    new_height = settings['num_pixels']
+    new_height = settings['numPixels']
     new_width = round((new_height / image.height) * image.width)
     
     image = image.resize((new_width, new_height), resample=resampling)

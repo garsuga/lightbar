@@ -1,14 +1,14 @@
 import { createSlice, configureStore, Slice, Store } from "@reduxjs/toolkit";
 
 export type LightbarSettings = {
-    num_pixels: number,
-    num_pixels_each: number,
-    num_units: number,
+    numPixels: number,
+    numPixelsEach: number,
+    numUnits: number,
     devices: string[],
     speed: number,
-    red_index: number,
-    green_index: number,
-    blue_index: number
+    redIndex: number,
+    greenIndex: number,
+    blueIndex: number
 }
 
 export type ImageStat = {

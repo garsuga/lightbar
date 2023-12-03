@@ -67,7 +67,7 @@ class CombinedLightbar(Lightbar):
 
 def _create_lightbar(settings):
     devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
-    return CombinedLightbar([(device, settings['num_pixels_each']) for device in devices])
+    return CombinedLightbar([(device, settings['numPixelsEach']) for device in devices])
 
 LIGHTBAR = _create_lightbar(settings)
 

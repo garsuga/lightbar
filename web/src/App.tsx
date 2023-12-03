@@ -1,7 +1,6 @@
 import './App.scss';
-import React, { useState, useRef, FunctionComponent } from 'react';
-import { Container, Image, Card } from 'react-bootstrap';
-import { useBreakpoint } from './breakpoint';
+import React, { useRef, FunctionComponent } from 'react';
+import { Container, Card } from 'react-bootstrap';
 import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings } from './store';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
@@ -33,6 +32,13 @@ const fetchLightbarSettings = async () => {
 }
 
 const Index: FunctionComponent<{}> = () => {
+    const dispatch = useDispatch();
+
+    useConstructor(() => {
+        fetchImages().then(images => dispatch(setImageStats(images)));
+        fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
+    })
+
     return (
         <Container className="app" fluid>
             <ImageCards/>
@@ -56,19 +62,12 @@ export const App: FunctionComponent<{}> = () => {
 }
 
 const ImageCards: FunctionComponent<{}> = () => {
-    const dispatch = useDispatch();
-
-    useConstructor(() => {
-        fetchImages().then(images => dispatch(setImageStats(images)));
-        fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
-    })
-
     let images = useSelector(selectImageStats);
     let lightbarSettings = useSelector(selectLightbarSettings);
 
     let imageElements = Object.entries(images).map(([name, stat]) => {
         let size = stat.original.size;
-        let color = lightbarSettings ? (size.height == lightbarSettings.num_pixels ? 'lime' : 'crimson') : undefined;
+        let color = lightbarSettings && lightbarSettings.numPixels ? (size.height == lightbarSettings.numPixels ? 'lime' : 'crimson') : undefined;
         return (<Card style={{width: "15rem", margin: "1rem"}}>
             <Card.Img alt={name} src={stat.thumbnail.url} width="15rem"/>
             <Card.Body>
