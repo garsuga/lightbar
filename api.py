@@ -20,7 +20,10 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp']
 def allowed_image(filename):
-    suffixes = Path(filename).suffixes
+    fpath = Path(filename)
+    suffixes = fpath.suffixes
+    if fpath.stem == 'data':
+        return False
     return len(suffixes) == 1 and str.lower(suffixes[0]) in ALLOWED_IMAGE_EXTENSIONS
 
 # remove transparency by overlaying image on black
