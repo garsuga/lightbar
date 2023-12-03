@@ -1,21 +1,10 @@
 import './App.scss';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, FunctionComponent } from 'react';
 import { Container, Image, Card } from 'react-bootstrap';
 import { useBreakpoint } from './breakpoint';
-
-
-export type ImageStat = {
-    size: {
-        width: number,
-        height: number
-    },
-    url: string
-}
-
-export type ImageStats = {[imageName: string]: {
-    original: ImageStat,
-    thumbnail: ImageStat
-}}
+import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings } from './store';
+import { Provider, useDispatch, useSelector } from 'react-redux';
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 const useConstructor: (constructor: () => void) => void = (cFunc) => {
     let hasRunRef = useRef<boolean>(false);
@@ -25,48 +14,70 @@ const useConstructor: (constructor: () => void) => void = (cFunc) => {
     }
 }
 
-const useImages: () => [() => Promise<void>, ImageStats] = () => {
-    const [images, setImages] = useState<ImageStats>({});
-
-    const loadImages = async () => {
-        let response = await fetch("/images")
-        if(response.status === 200){
-            let imagesJson = await response.json()
-            setImages(imagesJson)
-        } else {
-            throw new Error(`Bad response ${response.status}: ${response.statusText}`)
-        }
+const fetchImages = async () => {
+    let response = await fetch("/images")
+    if(response.status === 200){
+        let imagesJson = await response.json()
+        return imagesJson as ImageStats
     }
-
-    return [loadImages, images];
+    throw new Error(`Bad response ${response.status}: ${response.statusText}`)
 }
 
-export function App() {
-  return (
-    <Container className="app" fluid>
-        <ImageCards></ImageCards>
-    </Container>
-  );
+const fetchLightbarSettings = async () => {
+    let response = await fetch("/lightbar-settings")
+    if(response.status === 200){
+        let lightbarSettings = await response.json()
+        return lightbarSettings as LightbarSettings
+    }
+    throw new Error(`Bad response ${response.status}: ${response.statusText}`)
 }
 
+const Index: FunctionComponent<{}> = () => {
+    return (
+        <Container className="app" fluid>
+            <ImageCards/>
+        </Container>
+    )
+}
 
-const ImageCards: React.FunctionComponent<{}> = (props) => {
-    let [loadImages, images] = useImages();
+const router = createBrowserRouter([
+    {
+        path: "/",
+        element: <Index/>
+    }
+]);
+
+export const App: FunctionComponent<{}> = () => {
+    return (
+        <Provider store={store}>
+            <RouterProvider router={router}/>
+        </Provider>
+    );
+}
+
+const ImageCards: FunctionComponent<{}> = () => {
+    const dispatch = useDispatch();
+
     useConstructor(() => {
-        loadImages();
+        fetchImages().then(images => dispatch(setImageStats(images)));
+        fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
     })
-    //let breakpoint = useBreakpoint();
 
-
+    let images = useSelector(selectImageStats);
+    let lightbarSettings = useSelector(selectLightbarSettings);
 
     let imageElements = Object.entries(images).map(([name, stat]) => {
+        let size = stat.original.size;
+        let color = lightbarSettings ? (size.height == lightbarSettings.num_pixels ? 'lime' : 'crimson') : undefined;
         return (<Card style={{width: "15rem", margin: "1rem"}}>
             <Card.Img alt={name} src={stat.thumbnail.url} width="15rem"/>
             <Card.Body>
                 <Card.Title>
                     {name}
                 </Card.Title>
-                
+                <Card.Text>
+                    <p className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</p>
+                </Card.Text>
             </Card.Body>
         </Card>)
     });
