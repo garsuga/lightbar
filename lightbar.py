@@ -6,6 +6,7 @@ from functools import reduce
 from pathlib import Path
 import json
 import numpy as np
+import asyncio
 
 settings_path = Path("./") / "lightbar_settings.json"
 settings = None
@@ -18,7 +19,7 @@ def _format_transfer(image_arr_slice):
     start = [0x00, 0x00, 0x00, 0x00]
     f = (len(image_arr_slice) + 15) // 16
     end = [0xFF] * f
-    bytes = [*start, *list(image_arr_slice), *end]
+    bytes = [*start, *image_arr_slice, *end]
 
     return bytes
 
@@ -75,6 +76,10 @@ def turn_off_lightbar():
     LIGHTBAR.display(BLACK(LIGHTBAR.size))
 
 def display_image(image_path, image_stat_path):
+    loop = asyncio.get_event_loop()
+    loop.create_task(_display_image(image_path, image_stat_path))
+
+async def _display_image(image_path, image_stat_path):
     image = Image.open(image_path)
     stats = None
     with open(image_stat_path, 'r') as image_stat_file:
@@ -84,12 +89,30 @@ def display_image(image_path, image_stat_path):
     frame_length = 1 / fps
 
     image_arr = np.asarray(image)
+    # flip image sideways
+    image_arr = np.transpose(image_arr, (1, 0, 2))
+    # flatten "rows" (were columns)
+    image_arr = np.reshape(image_arr, (image_arr.shape[0], image_arr.shape[1] * image_arr.shape[2]))
+
+    slices = image_arr.shape[0]
+    # could gamma correct here
     
-    def image_slice(i):
-        return image_arr[:,i:i+1,:]
-    
-    for i in range(0, image_arr.shape[1]):
+    image_start = time.time_ns()
+
+    for i in range(0, slices):
         frame_start = time.time_ns()
-        LIGHTBAR.display(image_slice(i))
+        LIGHTBAR.display(image_arr[i])
         frame_end = time.time_ns()
         time.sleep(max(0, frame_length - (frame_end - frame_start)))
+
+    elapsed_time = time.time_ns() - image_start
+    intended_time = slices / 30
+
+    actual_fps = slices / elapsed_time
+    
+    print("elapsed time", elapsed_time)
+    print("intended time", intended_time)
+    print("actual fps", actual_fps)
+    print("intended fps", fps)
+
+
