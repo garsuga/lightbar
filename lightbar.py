@@ -56,8 +56,15 @@ class CombinedLightbar(Lightbar):
             _show_spi(pixels[i:i+l], spi)
             i += l
 
+def format_image_for_output(image):
+    image_arr = np.asarray(image)
+    # flip image sideways
+    image_arr = np.transpose(image_arr, (1, 0, 2))
+    # flatten "rows" (were columns)
+    image_arr = np.reshape(image_arr, (image_arr.shape[0], image_arr.shape[1] * image_arr.shape[2]))
+    return image_arr
 
-def _create_lightbar(settings):
+def create_lightbar(settings):
     devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
     return CombinedLightbar([(device, settings['numPixelsEach']) for device in devices])
 
@@ -75,24 +82,20 @@ async def _display_image(lightbar, image_path, display_settings):
 
     frame_length = 1 / fps
 
-    image_arr = np.asarray(image)
-    # flip image sideways
-    image_arr = np.transpose(image_arr, (1, 0, 2))
-    # flatten "rows" (were columns)
-    image_arr = np.reshape(image_arr, (image_arr.shape[0], image_arr.shape[1] * image_arr.shape[2]))
+    image_arr = format_image_for_output(image)
 
     slices = image_arr.shape[0]
     # could gamma correct here
     
-    image_start = time.time_ns()
+    image_start = time.time()
 
     for i in range(0, slices):
-        frame_start = time.time_ns()
+        frame_start = time.time()
         lightbar.display(image_arr[i])
-        frame_end = time.time_ns()
+        frame_end = time.time()
         time.sleep(max(0, frame_length - (frame_end - frame_start)))
 
-    elapsed_time = time.time_ns() - image_start
+    elapsed_time = time.time() - image_start
     intended_time = slices / 30
 
     actual_fps = slices / elapsed_time
@@ -103,3 +106,29 @@ async def _display_image(lightbar, image_path, display_settings):
     print("intended fps", fps)
 
 
+if __name__ == "__main__":
+    from api import _get_lightbar_settings
+    settings = _get_lightbar_settings()
+    lightbar = create_lightbar(settings)
+    N = 450
+    
+    
+def calculate_fps(lightbar, N=600):
+    test_image = Image.new("RGBA", (N, lightbar.size), (0, 0, 0, 0))
+    pa = test_image.load()
+    for i in range(0, N):
+        pa[i, i % lightbar.size] = (255, 0, 0, 255)
+    image_arr = format_image_for_output(test_image)
+
+    slices = image_arr.shape[0]
+    
+    image_start = time.time()
+
+    for i in range(0, slices):
+        lightbar.display(image_arr[i])
+
+    elapsed_time = time.time() - image_start
+
+    fps = N / elapsed_time
+
+    print(f"{fps} fps")
