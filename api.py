@@ -159,6 +159,7 @@ def active_image():
         stats = _create_image_stat(encoded, ACTIVE_IMAGE_RAW_URL)
         stats['fps'] = fps
         stats['name'] = image_name
+        stats['brightness'] = brightness
         with open(ACTIVE_IMAGE_STAT_PATH, "w") as statsfile:
             json.dump(stats, statsfile, indent=4)
         return "Image prepared"
