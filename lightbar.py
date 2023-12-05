@@ -3,28 +3,28 @@ import time
 import spi
 from PIL import Image
 from functools import reduce
-import json
 import numpy as np
-import asyncio
 
 def _format_transfer(image_arr_slice):
     start = [0x00, 0x00, 0x00, 0x00]
-    f = (len(image_arr_slice) + 15) // 16
+    f = (len(image_arr_slice) // 4 + 15) // 16
     end = [0xFF] * f
-    bytes = [*start, *image_arr_slice, *end]
-
-    return bytes
+    b = [*start, *image_arr_slice, *end]
+    return b
 
 def _show_spi(pixels, device):
-    bytes = _format_transfer(pixels)
-    t = tuple(bytes)
+    b = _format_transfer(pixels)
+    t = tuple(b)
     spi.transfer(device, t)
 
 def BLACK(size):
-    return [[0x00, 0x00, 0x00] for _ in range(0, size)]
+    return [0xFF, 0x00, 0x00, 0x00] * size
 
 def WHITE(size):
-    return [[0xFF, 0xFF, 0xFF] for _ in range(0, size)]
+    return [0xFF] * (size * 4)
+
+def RED(size):
+    return [0xFF, 0x00, 0x00, 0xFF] * size
 
 GPIO.setmode(GPIO.BOARD)
 
@@ -62,7 +62,7 @@ def format_image_for_output(image):
     image_arr = np.transpose(image_arr, (1, 0, 2))
     # flatten "rows" (were columns)
     image_arr = np.reshape(image_arr, (image_arr.shape[0], image_arr.shape[1] * image_arr.shape[2]))
-    return image_arr
+    return image_arr.tolist()
 
 def create_lightbar(settings):
     devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
@@ -73,10 +73,9 @@ def turn_off_lightbar(lightbar):
     lightbar.display(BLACK(lightbar.size))
 
 def display_image(lightbar, image_path, display_settings):
-    loop = asyncio.get_event_loop()
-    loop.create_task(_display_image(lightbar, image_path, display_settings))
+    _display_image(lightbar, image_path, display_settings)
 
-async def _display_image(lightbar, image_path, display_settings):
+def _display_image(lightbar, image_path, display_settings):
     image = Image.open(image_path)
     fps = display_settings['fps']
 
@@ -84,7 +83,7 @@ async def _display_image(lightbar, image_path, display_settings):
 
     image_arr = format_image_for_output(image)
 
-    slices = image_arr.shape[0]
+    slices = len(image_arr)
     # could gamma correct here
     
     image_start = time.time()
@@ -104,23 +103,18 @@ async def _display_image(lightbar, image_path, display_settings):
     print("intended time", intended_time)
     print("actual fps", actual_fps)
     print("intended fps", fps)
-
-
-if __name__ == "__main__":
-    from api import _get_lightbar_settings
-    settings = _get_lightbar_settings()
-    lightbar = create_lightbar(settings)
-    N = 450
     
     
 def calculate_fps(lightbar, N=600):
-    test_image = Image.new("RGBA", (N, lightbar.size), (0, 0, 0, 0))
+    test_image = Image.new("RGBA", (N, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
     for i in range(0, N):
         pa[i, i % lightbar.size] = (255, 0, 0, 255)
+    test_image.save("./test.png")
+
     image_arr = format_image_for_output(test_image)
 
-    slices = image_arr.shape[0]
+    slices = len(image_arr)
     
     image_start = time.time()
 
@@ -132,3 +126,11 @@ def calculate_fps(lightbar, N=600):
     fps = N / elapsed_time
 
     print(f"{fps} fps")
+
+if __name__ == "__main__":
+    from api import _get_lightbar_settings
+    settings = _get_lightbar_settings()
+    lightbar = create_lightbar(settings)
+    N = 600
+    calculate_fps(lightbar, N)
+    lightbar.display(BLACK(lightbar.size))

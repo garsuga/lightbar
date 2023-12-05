@@ -173,14 +173,14 @@ const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => v
                         <Form.Label>
                             Brightness
                         </Form.Label>
-                        <Form.Range min="0" max="100" step="1" value={brightness} onChange={ev => updateBrightness(parseFloat(ev.target.value))}/>
+                        <Form.Range min="1" max="100" step="1" value={brightness} onChange={ev => updateBrightness(parseFloat(ev.target.value))}/>
                         <Form.Label>{brightness}</Form.Label>
                     </Form.Group>
                     <Form.Group>
                         <Form.Label>
                             FPS
                         </Form.Label>
-                        <Form.Range min="0" max="30" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
+                        <Form.Range min="1" max="30" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
                         <Form.Label>{fps}</Form.Label>
                     </Form.Group>
                 </Modal.Body>

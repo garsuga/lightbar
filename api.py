@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 import json
 import math
+import asyncio
 
 DATA_DIR = Path("./data")
 IMAGES_DIR = Path(DATA_DIR) / "images"
@@ -217,7 +218,10 @@ def active_image():
     
     
 def format_image(image_id, resampling, brightness):
-    resampling = Image.Resampling[resampling]
+    try:
+        resampling = Image.Resampling[resampling]
+    except:
+        resampling = Image.__getattribute__(resampling)
     settings = _get_lightbar_settings()
     image = _get_image_original(image_id)
 

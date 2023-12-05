@@ -26,7 +26,7 @@ The SPI busses on the PI Zero 2 W run at 500kHz max. This speed can be found by 
 
 # Each pixel for N pixels on strip (ex: 144)
 # Observe that colors are not in order
-1 byte brightness
+1 byte brightness (CANNOT BE 0)*
 1 byte blue
 1 byte green
 1 byte red
@@ -35,5 +35,6 @@ The SPI busses on the PI Zero 2 W run at 500kHz max. This speed can be found by 
 # E = ceil(N / 16)
 E * 0xFF
 ```
+*Long strings of output without any HIGH bits seem to confuse the Dotstars
 
 [Gamma correction](https://github.com/adafruit/Adafruit_CircuitPython_DotStar/issues/21#issue-323774759) might be needed to preserve colors at various brightnesses
