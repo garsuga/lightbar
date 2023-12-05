@@ -53,7 +53,7 @@ class CombinedLightbar(Lightbar):
         i = 0
         for spidev in self.spidevs:
             spi, l = spidev
-            _show_spi(pixels[i:i+l], spi)
+            _show_spi(pixels[i*4:i*4+l*4], spi)
             i += l
 
 def format_image_for_output(image):
