@@ -1,3 +1,4 @@
 *.png
 /data
 /pillowtest
+display_settings.json
