@@ -69,7 +69,7 @@ def index(path):
         return send_from_directory(app.static_folder, 'index.html')
 
 # Serve Static Files (/data/<path:path>)
-@app.route(f'/{str(DATA_DIR).replace('\\', '/')}/<path:path>')
+@app.route('/' + str(DATA_DIR).replace("\\", "/") + '/<path:path>')
 def serve_file(path):
     if path != "" and os.path.exists(DATA_DIR / path):
         return send_from_directory(DATA_DIR, path)
