@@ -21,9 +21,9 @@ export type ImageStat = {
 }
 
 export type ActiveImageStat = {
-    fps: number,
-    brightness: number,
-    name: string
+    name: string,
+    id: string,
+    resampling: string
 } & ImageStat;
 
 export type ImageStats = {[imageName: string]: {
