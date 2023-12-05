@@ -206,6 +206,8 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
     let activeItem = useSelector(selectActiveItem);
     let displaySettings = useSelector(selectDisplaySettings)
 
+    let displayLightbar = () => fetch("/display");
+
     return (
         <>
             <SetDisplaySettingsModal show={modalShown} onHide={() => updateModalShown(false)}/>
@@ -232,7 +234,8 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                                                 )
                                             }
                                         </Card.Text>
-                                        <Button onClick={() => updateModalShown(true)}>Change Display Settings</Button>
+                                        <Button onClick={() => updateModalShown(true)} style={{marginRight: ".5rem"}}>Change Display Settings</Button>
+                                        <Button onClick={() => displayLightbar()} variant="success">Display</Button>
                                     </Card.Body>
                                 </>
                             ) : (

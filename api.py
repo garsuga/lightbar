@@ -102,6 +102,15 @@ def _get_display_settings():
 def get_lightbar_settings():
     return jsonify(_get_lightbar_settings())
 
+@app.route("/display", methods=["GET"])
+def display_on_ligthbar():
+    from lightbar import display_image, create_lightbar
+    lightbar_settings = _get_lightbar_settings()
+    display_settings = _get_display_settings()
+    lightbar = create_lightbar(lightbar_settings)
+    display_image(lightbar, ACTIVE_IMAGE_PATH, display_settings)
+    return "Display started on lightbar"
+
 # Get display settings
 @app.route("/display-settings", methods=["GET", "POST"])
 def get_display_settings():
@@ -207,8 +216,6 @@ def active_image():
         return jsonify({})
     
     
-
-
 def format_image(image_id, resampling, brightness):
     resampling = Image.Resampling[resampling]
     settings = _get_lightbar_settings()
@@ -222,7 +229,6 @@ def format_image(image_id, resampling, brightness):
     encoded = _encode_pixels(image, settings, brightness)
 
     return image, encoded
-
 
 
 # Get images list
