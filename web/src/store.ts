@@ -31,12 +31,18 @@ export type ImageStats = {[imageName: string]: {
     thumbnail: ImageStat
 }}
 
+export type DisplaySettings = {
+    fps: number,
+    brightness: number
+}
+
 const remoteSlice = createSlice({
     name: "remote",
     initialState: {
         lightbarSettings: {} as LightbarSettings,
         imageStats: {} as ImageStats,
-        activeItem: {} as ActiveImageStat
+        activeItem: {} as ActiveImageStat,
+        displaySettings: {} as DisplaySettings
     },
     reducers: {
         setImageStats: (state, {payload}: {payload: ImageStats}) => {
@@ -47,7 +53,10 @@ const remoteSlice = createSlice({
         },
         setActiveItem: (state, {payload}: {payload: ActiveImageStat}) => {
             state.activeItem = payload
-        }
+        },
+        setDisplaySettings: (state, {payload}: {payload: DisplaySettings}) => {
+            state.displaySettings = payload
+        },
     }
 })
 
@@ -60,5 +69,6 @@ export const store: Store = configureStore({
 export const selectImageStats = (state: any) => state.remote.imageStats as ImageStats;
 export const selectLightbarSettings = (state: any) => state.remote.lightbarSettings as LightbarSettings;
 export const selectActiveItem = (state: any) => state.remote.activeItem as ActiveImageStat;
+export const selectDisplaySettings = (state: any) => state.remote.displaySettings as DisplaySettings;
 
-export const { setImageStats, setLightbarSettings, setActiveItem } = remoteSlice.actions;
+export const { setImageStats, setLightbarSettings, setActiveItem, setDisplaySettings } = remoteSlice.actions;

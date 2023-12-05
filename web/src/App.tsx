@@ -1,7 +1,7 @@
 import './App.scss';
-import React, { useRef, FunctionComponent } from 'react';
-import { Container, Card, Button, Row, Navbar } from 'react-bootstrap';
-import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings, ImageStat, ActiveImageStat, setActiveItem, selectActiveItem } from './store';
+import React, { useRef, FunctionComponent, useState } from 'react';
+import { Container, Card, Button, Row, Navbar, Modal, Form } from 'react-bootstrap';
+import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings, ImageStat, ActiveImageStat, setActiveItem, selectActiveItem, DisplaySettings, setDisplaySettings, selectDisplaySettings } from './store';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
@@ -40,13 +40,23 @@ const fetchActiveItem = async () => {
     throw new Error(`Bad response ${response.status}: ${response.statusText}`)
 }
 
+const fetchDisplaySettings = async () => {
+    let response = await fetch("/display-settings")
+    if(response.status === 200){
+        let displaySettings = await response.json()
+        return displaySettings as DisplaySettings
+    }
+    throw new Error(`Bad response ${response.status}: ${response.statusText}`)
+}
+
 const Index: FunctionComponent<{}> = () => {
     const dispatch = useDispatch();
 
     useConstructor(() => {
         fetchImages().then(images => dispatch(setImageStats(images)));
         fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
-        fetchActiveItem().then(activeImageStat => dispatch(setActiveItem(activeImageStat)))
+        fetchActiveItem().then(activeImageStat => dispatch(setActiveItem(activeImageStat)));
+        fetchDisplaySettings().then(displaySettings => dispatch(setDisplaySettings(displaySettings)));
     })
 
     return (
@@ -115,6 +125,7 @@ const LightbarNavbar: FunctionComponent<{}> = () => {
 const ActiveImageInfo: FunctionComponent<{}> = () => {
     
     let activeItem = useSelector(selectActiveItem);
+    let displaySettings = useSelector(selectDisplaySettings)
 
     return (
         <Container className="col-lg-4 col-xl-2 col-xs-12 gx-5" fluid>
@@ -129,10 +140,14 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                                         {activeItem.name}
                                     </Card.Title>
                                     <Card.Text>
-                                        <span style={{whiteSpace: "pre-line"}}>
-                                            {`Brightness: ${activeItem.brightness * 100}\n`}
-                                            {`FPS: ${activeItem.fps}`}
-                                        </span>
+                                        {
+                                            displaySettings && displaySettings.brightness && (
+                                                <span style={{whiteSpace: "pre-line"}}>
+                                                    {`Brightness: ${displaySettings.brightness * 100}\n`}
+                                                    {`FPS: ${displaySettings.fps}`}
+                                                </span>
+                                            )
+                                        }
                                     </Card.Text>
                                     <Button>Change Display Settings</Button>
                                 </Card.Body>
@@ -163,7 +178,9 @@ const ImageCards: FunctionComponent<{}> = () => {
     let images = useSelector(selectImageStats);
     let lightbarSettings = useSelector(selectLightbarSettings);
 
-    let imageElements = Object.entries(images).map(([id, stat]) => {
+    let [selectedImage, updateSelectedImage] = useState<string | undefined>(undefined);
+
+    let imageElements = Object.entries(images).sort(([aId, aValue], [bId, bValue]) => aValue.original.name.localeCompare(bValue.original.name)).map(([id, stat]) => {
         let size = stat.original.size;
         let needsResize = lightbarSettings && lightbarSettings.numPixels && size.height != lightbarSettings.numPixels;
         let color = !needsResize ? 'lime' : 'crimson';
@@ -171,32 +188,86 @@ const ImageCards: FunctionComponent<{}> = () => {
         
         return (
             <div className="col-lg-4 col-xs-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
-                <Card>
-                    <Card.Img className="pixel-image" alt={id} src={stat.thumbnail.url}/>
-                    <Card.Body>
-                        <Card.Title>
-                            {stat.original.name}
-                        </Card.Title>
-                        <Card.Text>
-                            <span className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</span>
-                            {needsResize && (<><span>&ensp;&#8594;&ensp;</span><span>{`${newDims.height} x ${newDims.width}`}</span></>)}
-                        </Card.Text>
-                    </Card.Body>
-                </Card>
+                <a onClick={() => updateSelectedImage(id)}>
+                    <Card>
+                        <Card.Img className="pixel-image" alt={id} src={stat.thumbnail.url}/>
+                        <Card.Body>
+                            <Card.Title>
+                                {stat.original.name}
+                            </Card.Title>
+                            <Card.Text>
+                                <span className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</span>
+                                {needsResize && (<><span>&ensp;&#8594;&ensp;</span><span>{`${newDims.height} x ${newDims.width}`}</span></>)}
+                            </Card.Text>
+                        </Card.Body>
+                    </Card>
+                </a>
             </div>
         )
     });
 
     return (
-        <Container className="col-lg-6 col-xs-12 gx-5" fluid>
-            <Row>
-                <h3 className="col-12">
-                    Saved Images
-                </h3>
-            </Row>
-            <Row>
-                {imageElements}
-            </Row>
-        </Container>
+        <>
+            <Container className="col-lg-6 col-xs-12 gx-5" fluid>
+                <Row>
+                    <h3 className="col-12">
+                        Saved Images
+                    </h3>
+                </Row>
+                <Row>
+                    {imageElements}
+                </Row>
+            </Container>
+
+            <SetActiveImageModal show={!!selectedImage} onHide={() => updateSelectedImage(undefined)} imageId={selectedImage} imageStat={selectedImage ? images[selectedImage].original : undefined}/>
+        </>
+    )
+}
+
+const resampleTypes = {
+    NEAREST: "Nearest Neighbor (Sharp Corners)",
+    BICUBIC: "Bi-Cubic (Soft Corners)",
+    BILINEAR: "Bi-Linear",
+    BOX: "Box",
+    HAMMING: "Hamming",
+    LANCZOS: "Lanczos"
+}
+
+const SetActiveImageModal: FunctionComponent<{show: boolean, onHide: () => void, imageId: string | undefined, imageStat: ImageStat | undefined}> = ({show, onHide, imageId, imageStat}) => {
+    return (
+        <Form>
+            <Modal show={show} onHide={onHide}>
+                {
+                    imageId && imageStat && (
+                        <>
+                        
+                            <Modal.Header>
+                                <Modal.Title>
+                                    Set as active?
+                                </Modal.Title>
+                            </Modal.Header>                            
+                            <Modal.Body>
+                                <Form.Group>
+                                    <Form.Label>Resize Resampling</Form.Label>
+                                    <Form.Switch defaultValue="NEAREST">
+                                        {Object.entries(resampleTypes).map(([id, prettyName]) => (
+                                            <option value={id}>{prettyName}</option>
+                                        ))}
+                                    </Form.Switch>
+                                </Form.Group>
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <Button variant="secondary" onClick={() => onHide()}>
+                                    Cancel
+                                </Button>
+                                <Button variant="primary">
+                                    Submit
+                                </Button>
+                            </Modal.Footer>
+                        </>
+                    )
+                }
+            </Modal>
+        </Form>
     )
 }

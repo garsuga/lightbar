@@ -3,17 +3,9 @@ import time
 import spi
 from PIL import Image
 from functools import reduce
-from pathlib import Path
 import json
 import numpy as np
 import asyncio
-
-settings_path = Path("./") / "lightbar_settings.json"
-settings = None
-
-with open(settings_path, "r") as settings_file:
-    settings = json.load(settings_file)
-
 
 def _format_transfer(image_arr_slice):
     start = [0x00, 0x00, 0x00, 0x00]
@@ -69,22 +61,17 @@ def _create_lightbar(settings):
     devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
     return CombinedLightbar([(device, settings['numPixelsEach']) for device in devices])
 
-LIGHTBAR = _create_lightbar(settings)
 
+def turn_off_lightbar(lightbar):
+    lightbar.display(BLACK(lightbar.size))
 
-def turn_off_lightbar():
-    LIGHTBAR.display(BLACK(LIGHTBAR.size))
-
-def display_image(image_path, image_stat_path):
+def display_image(lightbar, image_path, display_settings):
     loop = asyncio.get_event_loop()
-    loop.create_task(_display_image(image_path, image_stat_path))
+    loop.create_task(_display_image(lightbar, image_path, display_settings))
 
-async def _display_image(image_path, image_stat_path):
+async def _display_image(lightbar, image_path, display_settings):
     image = Image.open(image_path)
-    stats = None
-    with open(image_stat_path, 'r') as image_stat_file:
-        stats = json.load(image_stat_file)
-    fps = stats["fps"]
+    fps = display_settings['fps']
 
     frame_length = 1 / fps
 
@@ -101,7 +88,7 @@ async def _display_image(image_path, image_stat_path):
 
     for i in range(0, slices):
         frame_start = time.time_ns()
-        LIGHTBAR.display(image_arr[i])
+        lightbar.display(image_arr[i])
         frame_end = time.time_ns()
         time.sleep(max(0, frame_length - (frame_end - frame_start)))
 

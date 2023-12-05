@@ -14,7 +14,8 @@ IMAGES_DIR = Path(DATA_DIR) / "images"
 DATA_URL = Path("./data")
 IMAGES_URL = DATA_URL / "images"
 
-SETTINGS_PATH = Path("./") / "lightbar_settings.json"
+LIGHTBAR_SETTINGS_PATH = Path("./") / "lightbar_settings.json"
+DISPLAY_SETTINGS_PATH = Path("./") / "display_settings.json"
 
 ACTIVE_IMAGE_PATH = DATA_DIR / "active.png"
 ACTIVE_IMAGE_URL = DATA_URL / "active.png"
@@ -80,7 +81,13 @@ thumbnail_any_ext = any_extension("thumbnail")
 
 def _get_lightbar_settings():
     settings = None
-    with open(SETTINGS_PATH, "r") as settings_file:
+    with open(LIGHTBAR_SETTINGS_PATH, "r") as settings_file:
+        settings = json.load(settings_file)
+    return settings
+
+def _get_display_settings():
+    settings = None
+    with open(DISPLAY_SETTINGS_PATH, "r") as settings_file:
         settings = json.load(settings_file)
     return settings
 
@@ -88,6 +95,24 @@ def _get_lightbar_settings():
 @app.route("/lightbar-settings", methods=["GET"])
 def get_lightbar_settings():
     return jsonify(_get_lightbar_settings())
+
+# Get display settings
+@app.route("/display-settings", methods=["GET", "POST"])
+def get_display_settings():
+    if request.method == "GET":
+        return jsonify(_get_display_settings())
+    new_settings = dict()
+    body = request.json
+    new_settings['brightness'] = body['brightness']
+    new_settings['fps'] = body['fps']
+
+    with open(DISPLAY_SETTINGS_PATH, "w") as display_settings_file:
+        json.dump(new_settings, display_settings_file, indent=4)
+
+    active_image_stats = _get_active_image_stats()
+    if active_image_stats is not None:
+        _update_active_image(active_image_stats['id'], active_image_stats['resampling'], new_settings['brightness'])
+    return "Display settings updated"
 
 def _get_image_stats(id):
     stat_path = IMAGES_DIR / id / 'stats.json'
@@ -137,38 +162,42 @@ def serve_pil_image(pil_img):
     img_io.seek(0)
     return send_file(img_io, mimetype='image/png')
 
+def _update_active_image(image_id, resampling, brightness):
+    raw, encoded = format_image(image_id, resampling, brightness)
+    encoded.save(ACTIVE_IMAGE_PATH)
+    raw.save(ACTIVE_IMAGE_RAW_PATH)
+    old_stat = _get_image_stats(image_id)
+    stats = _create_image_stat(encoded, old_stat['original']['name'], ACTIVE_IMAGE_RAW_URL)
+    stats['id'] = image_id
+    stats['resampling'] = resampling
+    with open(ACTIVE_IMAGE_STAT_PATH, "w") as statsfile:
+        json.dump(stats, statsfile, indent=4)
+
+
+def _get_active_image_stats():
+    if os.path.isfile(ACTIVE_IMAGE_STAT_PATH):
+        with open(ACTIVE_IMAGE_STAT_PATH, "r") as statsfile:
+            return json.load(statsfile)
+    return None
+
 # prepare a saved image for lightbar and set it as active
 # {
 #    resampling?: 'NEAREST' | 'BOX' | 'BILINEAR' | 'HAMMING' | 'BICUBIC' | 'LANCZOS'
-#    imageId: string,
-#    brightness: [0 ... 1],
-#    fps: [0 ... 30]
+#    imageId: string
 # }
 @app.route("/active", methods=['GET', 'POST'])
 def active_image():
     if request.method == "POST":
         body = request.json
-        fps = body['fps'] if 'fps' in body else 30
-        if fps > 30 or fps < 0:
-            fps = 30
         resampling = body['resampling'] if 'resampling' in body else 'BICUBIC'
         image_id = body['imageId']
-        brightness = body['brightness']
-        raw, encoded = format_image(image_id, resampling, brightness)
-        encoded.save(ACTIVE_IMAGE_PATH)
-        raw.save(ACTIVE_IMAGE_RAW_PATH)
-        old_stat = _get_image_stats(image_id)
-        stats = _create_image_stat(encoded, old_stat['name'], ACTIVE_IMAGE_RAW_URL)
-        stats['fps'] = fps
-        stats['id'] = image_id
-        stats['brightness'] = brightness
-        with open(ACTIVE_IMAGE_STAT_PATH, "w") as statsfile:
-            json.dump(stats, statsfile, indent=4)
+        display_settings = _get_display_settings()
+        _update_active_image(image_id, resampling, display_settings['brightness'])
         return "Image prepared"
     if request.method == "GET":
-        if os.path.isfile(ACTIVE_IMAGE_STAT_PATH):
-            with open(ACTIVE_IMAGE_STAT_PATH, "r") as statsfile:
-                return jsonify(json.load(statsfile))
+        active_image_stats = _get_active_image_stats()
+        if active_image_stats is not None:
+            return jsonify(active_image_stats)
         return jsonify({})
     
     
@@ -182,7 +211,8 @@ def format_image(image_id, resampling, brightness):
     new_height = settings['numPixels']
     new_width = round((new_height / image.height) * image.width)
     
-    image = image.resize((new_width, new_height), resample=resampling)
+    if new_height != image.height:
+        image = image.resize((new_width, new_height), resample=resampling)
     encoded = _encode_pixels(image, settings, brightness)
 
     return image, encoded
