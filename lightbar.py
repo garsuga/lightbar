@@ -14,8 +14,7 @@ def _format_transfer(image_arr_slice):
 
 def _show_spi(pixels, device):
     b = _format_transfer(pixels)
-    t = tuple(b)
-    spi.transfer(device, t)
+    spi.transfer(device, tuple(b))
 
 def BLACK(size):
     return [0xFF, 0x00, 0x00, 0x00] * size
@@ -120,6 +119,11 @@ def calculate_fps(lightbar, N=600):
 
     for i in range(0, slices):
         lightbar.display(image_arr[i])
+        if i == slices//2:
+            elapsed_time = time.time() - image_start
+            fps = i / elapsed_time
+            print(f"half: {fps} fps")
+
 
     elapsed_time = time.time() - image_start
 
