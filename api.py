@@ -87,6 +87,12 @@ def _get_lightbar_settings():
 
 def _get_display_settings():
     settings = None
+    if not os.path.exists(DISPLAY_SETTINGS_PATH):
+        with open(DISPLAY_SETTINGS_PATH, "w") as settings_file:
+            json.dump(dict(
+                brightness=.5,
+                fps=10
+            ), settings_file)
     with open(DISPLAY_SETTINGS_PATH, "r") as settings_file:
         settings = json.load(settings_file)
     return settings
