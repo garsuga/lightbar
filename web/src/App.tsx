@@ -89,7 +89,7 @@ const LightbarNavbar: FunctionComponent<{}> = () => {
     let lightbarSettings = useSelector(selectLightbarSettings);
 
     return (
-        <Navbar className="bg-body-tertiary">
+        <Navbar className="bg-body-tertiary" sticky='top'>
             <Container>
                 <Navbar.Brand href="/">
                     Lightbar
