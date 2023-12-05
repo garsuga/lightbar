@@ -1,4 +1,4 @@
 *.png
 /data
 /pillowtest
-display_settings.json
+./display_settings.json
