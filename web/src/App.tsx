@@ -4,6 +4,7 @@ import { Container, Card, Button, Row, Navbar, Modal, Form } from 'react-bootstr
 import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings, ImageStat, ActiveImageStat, setActiveItem, selectActiveItem, DisplaySettings, setDisplaySettings, selectDisplaySettings } from './store';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { Dispatch } from '@reduxjs/toolkit';
 
 const useConstructor: (constructor: () => void) => void = (cFunc) => {
     let hasRunRef = useRef<boolean>(false);
@@ -49,14 +50,19 @@ const fetchDisplaySettings = async () => {
     throw new Error(`Bad response ${response.status}: ${response.statusText}`)
 }
 
+const updateImages = (dispatch: Dispatch) => fetchImages().then(images => dispatch(setImageStats(images)));
+const updateLightbarSettings = (dispatch: Dispatch) => fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
+const updateActiveItem = (dispatch: Dispatch) => fetchActiveItem().then(activeImageStat => dispatch(setActiveItem(activeImageStat)));
+const updateDisplaySettings = (dispatch: Dispatch) => fetchDisplaySettings().then(displaySettings => dispatch(setDisplaySettings(displaySettings)));
+
 const Index: FunctionComponent<{}> = () => {
     const dispatch = useDispatch();
 
     useConstructor(() => {
-        fetchImages().then(images => dispatch(setImageStats(images)));
-        fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
-        fetchActiveItem().then(activeImageStat => dispatch(setActiveItem(activeImageStat)));
-        fetchDisplaySettings().then(displaySettings => dispatch(setDisplaySettings(displaySettings)));
+        updateImages(dispatch);
+        updateLightbarSettings(dispatch);
+        updateActiveItem(dispatch);
+        updateDisplaySettings(dispatch);
     })
 
     return (
@@ -134,7 +140,7 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                     <Card>
                         {activeItem && activeItem.url ? (
                             <>
-                                <Card.Img className="pixel-image" src={activeItem.url}/>
+                                <Card.Img className="pixel-image" src={activeItem.url + `?id=${activeItem.id}`}/>
                                 <Card.Body>
                                     <Card.Title>
                                         {activeItem.name}
@@ -143,8 +149,10 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                                         {
                                             displaySettings && displaySettings.brightness && (
                                                 <span style={{whiteSpace: "pre-line"}}>
+                                                    {`${activeItem.size.width} x ${activeItem.size.height}\n`}
                                                     {`Brightness: ${displaySettings.brightness * 100}\n`}
-                                                    {`FPS: ${displaySettings.fps}`}
+                                                    {`FPS: ${displaySettings.fps}\n`}
+                                                    {`Duration: ${(activeItem.size.width / displaySettings.fps).toFixed(2)} seconds`}
                                                 </span>
                                             )
                                         }
@@ -196,8 +204,8 @@ const ImageCards: FunctionComponent<{}> = () => {
                                 {stat.original.name}
                             </Card.Title>
                             <Card.Text>
-                                <span className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</span>
-                                {needsResize && (<><span>&ensp;&#8594;&ensp;</span><span>{`${newDims.height} x ${newDims.width}`}</span></>)}
+                                <span className="font-weight-bold" style={{color}}>{`${size.width} x ${size.height}`}</span>
+                                {needsResize && (<><span>&ensp;&#8594;&ensp;</span><span>{`${newDims.width} x ${newDims.height}`}</span></>)}
                             </Card.Text>
                         </Card.Body>
                     </Card>
@@ -234,13 +242,28 @@ const resampleTypes = {
 }
 
 const SetActiveImageModal: FunctionComponent<{show: boolean, onHide: () => void, imageId: string | undefined, imageStat: ImageStat | undefined}> = ({show, onHide, imageId, imageStat}) => {
+    let [resampling, updateResampling] = useState<string>();
+    let dispatch = useDispatch();
+
+    let submitForm = () => {
+        fetch('/active', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                resampling,
+                imageId
+            })
+        }).then(() => updateActiveItem(dispatch))
+    }
+
     return (
-        <Form>
-            <Modal show={show} onHide={onHide}>
-                {
-                    imageId && imageStat && (
-                        <>
-                        
+        <Modal show={show} onHide={onHide}>
+            {
+                imageId && imageStat && (
+                    <>
+                        <Form>
                             <Modal.Header>
                                 <Modal.Title>
                                     Set as active?
@@ -249,25 +272,28 @@ const SetActiveImageModal: FunctionComponent<{show: boolean, onHide: () => void,
                             <Modal.Body>
                                 <Form.Group>
                                     <Form.Label>Resize Resampling</Form.Label>
-                                    <Form.Switch defaultValue="NEAREST">
+                                    <Form.Select required id="resampling" defaultValue="NEAREST" value={resampling} onChange={ev => updateResampling(ev.target.value)}>
                                         {Object.entries(resampleTypes).map(([id, prettyName]) => (
                                             <option value={id}>{prettyName}</option>
                                         ))}
-                                    </Form.Switch>
+                                    </Form.Select>
                                 </Form.Group>
                             </Modal.Body>
                             <Modal.Footer>
                                 <Button variant="secondary" onClick={() => onHide()}>
                                     Cancel
                                 </Button>
-                                <Button variant="primary">
+                                <Button variant="primary" onClick={() => {
+                                    onHide();
+                                    submitForm();
+                                }}>
                                     Submit
                                 </Button>
                             </Modal.Footer>
-                        </>
-                    )
-                }
-            </Modal>
-        </Form>
+                        </Form>
+                    </>
+                )
+            }
+        </Modal>
     )
 }
