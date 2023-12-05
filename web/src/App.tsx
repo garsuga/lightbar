@@ -1,6 +1,6 @@
 import './App.scss';
 import React, { useRef, FunctionComponent } from 'react';
-import { Container, Card, Button } from 'react-bootstrap';
+import { Container, Card, Button, Row, Navbar } from 'react-bootstrap';
 import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings, ImageStat, ActiveImageStat, setActiveItem, selectActiveItem } from './store';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
@@ -50,10 +50,23 @@ const Index: FunctionComponent<{}> = () => {
     })
 
     return (
-        <Container className="app" fluid>
-            <ImageAndLightbarInfo/>
-            <ImageCards/>
-        </Container>
+        <>
+            <LightbarNavbar/>
+            <Container className="app" fluid>
+                <Row>
+                    <ActiveImageInfo/>
+                </Row>
+                <Row>
+                    <div className="col-lg-6 col-xs-10 mx-auto" style={{marginTop: "1rem", marginBottom: "1rem"}}>
+                        <hr/>
+                    </div>
+                </Row>
+                <Row>
+                    <ImageCards/>
+                </Row>
+            </Container>
+        </>
+        
     )
 }
 
@@ -72,59 +85,69 @@ export const App: FunctionComponent<{}> = () => {
     );
 }
 
-const ImageAndLightbarInfo: FunctionComponent<{}> = () => {
+const LightbarNavbar: FunctionComponent<{}> = () => {
     let lightbarSettings = useSelector(selectLightbarSettings);
+
+    return (
+        <Navbar className="bg-body-tertiary">
+            <Container>
+                <Navbar.Brand href="/">
+                    Lightbar
+                </Navbar.Brand>
+                {
+                    lightbarSettings && lightbarSettings.devices ? (
+                        <>
+                            <Navbar.Text>
+                                {lightbarSettings.numPixels} px&emsp;{lightbarSettings.numUnits} strips&emsp;{lightbarSettings.speed} Hz
+                            </Navbar.Text>
+                        </>
+                    ) : (
+                        <Navbar.Text>
+                            Loading...
+                        </Navbar.Text>
+                    )
+                }
+            </Container>
+        </Navbar>
+    )
+}
+
+const ActiveImageInfo: FunctionComponent<{}> = () => {
+    
     let activeItem = useSelector(selectActiveItem);
 
     return (
-        <div className="d-flex flew-row flex-wrap justify-content-center">
-            <Card>
-                <Card.Body>
-                    <Card.Title>
-                        Lightbar Info
-                    </Card.Title>
-                    <Card.Body>
-                        {lightbarSettings && lightbarSettings.devices ? (<>
-                            <span style={{whiteSpace: "pre-line"}}>
-                                {`Number of Devices: ${lightbarSettings.devices.length}\n`}
-                                {`Device Speed: ${lightbarSettings.speed} Hz\n`}
-                                {`Pixels / Device: ${lightbarSettings.numPixelsEach}\n`}
-                                {`Total Pixels: ${lightbarSettings.numPixels}`}
-                            </span>
-                        </>) : (<>
-                            Loading...
-                        </>)}
-                        
-                    </Card.Body>
-                </Card.Body>
-            </Card>
+        <Container className="col-lg-4 col-xl-2 col-xs-12 gx-5" fluid>
+            <Row>
+                <div className="col-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
+                    <Card>
+                        {activeItem && activeItem.url ? (
+                            <>
+                                <Card.Img src={activeItem.url}/>
+                                <Card.Body>
+                                    <Card.Title>
+                                        Active Item: {activeItem.name}
+                                    </Card.Title>
+                                    <Card.Text>
+                                        <span style={{whiteSpace: "pre-line"}}>
+                                            {`Brightness: ${activeItem.brightness * 100}\n`}
+                                            {`FPS: ${activeItem.fps}`}
+                                        </span>
+                                    </Card.Text>
+                                    <Button>Change Display Settings</Button>
+                                </Card.Body>
+                            </>
+                        ) : (
+                            <Card.Body>
+                                <Card.Title>
 
-            <Card>
-                {activeItem && activeItem.url ? (
-                    <>
-                        <Card.Img src={activeItem.url}/>
-                        <Card.Body>
-                            <Card.Title>
-                                Active Item: {activeItem.name}
-                            </Card.Title>
-                            <Card.Text>
-                                <span style={{whiteSpace: "pre-line"}}>
-                                    {`Brightness: ${activeItem.brightness}\n`}
-                                    {`FPS: ${activeItem.fps}`}
-                                </span>
-                            </Card.Text>
-                            <Button>Change Display Settings</Button>
-                        </Card.Body>
-                    </>
-                ) : (
-                    <Card.Body>
-                        <Card.Title>
-
-                        </Card.Title>
-                    </Card.Body>
-                )}
-            </Card>
-        </div>
+                                </Card.Title>
+                            </Card.Body>
+                        )}
+                    </Card>
+                </div>
+            </Row>
+        </Container>
     )
 }
 
@@ -135,22 +158,33 @@ const ImageCards: FunctionComponent<{}> = () => {
     let imageElements = Object.entries(images).map(([name, stat]) => {
         let size = stat.original.size;
         let color = lightbarSettings && lightbarSettings.numPixels ? (size.height == lightbarSettings.numPixels ? 'lime' : 'crimson') : undefined;
-        return (<Card style={{width: "15rem", margin: "1rem"}}>
-            <Card.Img alt={name} src={stat.thumbnail.url} width="15rem"/>
-            <Card.Body>
-                <Card.Title>
-                    {name}
-                </Card.Title>
-                <Card.Text>
-                    <p className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</p>
-                </Card.Text>
-            </Card.Body>
-        </Card>)
+        return (
+            <div className="col-lg-4 col-xs-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
+                <Card>
+                    <Card.Img alt={name} src={stat.thumbnail.url}/>
+                    <Card.Body>
+                        <Card.Title>
+                            {name}
+                        </Card.Title>
+                        <Card.Text>
+                            <p className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</p>
+                        </Card.Text>
+                    </Card.Body>
+                </Card>
+            </div>
+        )
     });
 
     return (
-        <div className="d-flex flex-row flex-wrap justify-content-center flex-grow-0 flex-shrink-0 ">
-            {imageElements}
-        </div>
+        <Container className="col-lg-6 col-xs-12 gx-5" fluid>
+            <Row>
+                <h3 className="col-12">
+                    Saved Images
+                </h3>
+            </Row>
+            <Row>
+                {imageElements}
+            </Row>
+        </Container>
     )
 }
