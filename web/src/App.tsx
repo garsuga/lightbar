@@ -105,72 +105,148 @@ const LightbarNavbar: FunctionComponent<{}> = () => {
     let lightbarSettings = useSelector(selectLightbarSettings);
 
     return (
-        <Navbar className="bg-body-tertiary" sticky='top'>
-            <Container>
-                <Navbar.Brand href="/">
-                    Lightbar
-                </Navbar.Brand>
-                {
-                    lightbarSettings && lightbarSettings.devices ? (
-                        <>
+        <>
+            <Navbar className="bg-body-tertiary" sticky='top'>
+                <Container>
+                    <Navbar.Brand href="/">
+                        Lightbar
+                    </Navbar.Brand>
+                    {
+                        lightbarSettings && lightbarSettings.devices ? (
+                            <>
+                                <Navbar.Text>
+                                    {lightbarSettings.numPixels} px&emsp;{lightbarSettings.numUnits} strips&emsp;{lightbarSettings.speed} Hz
+                                </Navbar.Text>
+                            </>
+                        ) : (
                             <Navbar.Text>
-                                {lightbarSettings.numPixels} px&emsp;{lightbarSettings.numUnits} strips&emsp;{lightbarSettings.speed} Hz
+                                Loading...
                             </Navbar.Text>
-                        </>
-                    ) : (
-                        <Navbar.Text>
-                            Loading...
-                        </Navbar.Text>
-                    )
-                }
-            </Container>
-        </Navbar>
+                        )
+                    }
+                </Container>
+            </Navbar>
+        </>
+    )
+}
+
+const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => void}> = ({show, onHide}) => {
+    let displaySettings = useSelector(selectDisplaySettings);
+    let [brightness, updateBrightness] = useState<number>();
+    let [fps, updateFps] = useState<number>();
+    let dispatch = useDispatch();
+    if(!displaySettings) {
+        return <></>
+    }
+
+    if(fps === undefined && displaySettings.fps !== undefined) {
+        updateFps(displaySettings.fps);
+    }
+
+    if(brightness === undefined && displaySettings.brightness !== undefined) {
+        updateBrightness(displaySettings.brightness * 100);
+    }
+
+    let submitForm = () => {
+        fetch("/display-settings", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                fps,
+                brightness: (brightness as number) / 100.0
+            })
+        }).then(() => updateDisplaySettings(dispatch));
+    }
+    
+    return (
+        <Modal show={show} onHide={onHide}>
+            <Form>
+                <Modal.Header>
+                    <Modal.Title>
+                        Display Settings
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Group>
+                        <Form.Label>
+                            Brightness
+                        </Form.Label>
+                        <Form.Range min="0" max="100" step="1" value={brightness} onChange={ev => updateBrightness(parseFloat(ev.target.value))}/>
+                        <Form.Label>{brightness}</Form.Label>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>
+                            FPS
+                        </Form.Label>
+                        <Form.Range min="0" max="30" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
+                        <Form.Label>{fps}</Form.Label>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => onHide()}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={() => {
+                        onHide();
+                        submitForm();
+                    }}>
+                        Submit
+                    </Button>
+                </Modal.Footer>
+            </Form>
+        </Modal>
     )
 }
 
 const ActiveImageInfo: FunctionComponent<{}> = () => {
+    let [modalShown, updateModalShown] = useState<boolean>(false);
     
     let activeItem = useSelector(selectActiveItem);
     let displaySettings = useSelector(selectDisplaySettings)
 
     return (
-        <Container className="col-lg-4 col-xl-2 col-xs-12 gx-5" fluid>
-            <Row>
-                <div className="col-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
-                    <Card>
-                        {activeItem && activeItem.url ? (
-                            <>
-                                <Card.Img className="pixel-image" src={activeItem.url + `?id=${activeItem.id}`}/>
+        <>
+            <SetDisplaySettingsModal show={modalShown} onHide={() => updateModalShown(false)}/>
+            <Container className="col-lg-4 col-xl-2 col-xs-12 gx-5" fluid>
+                <Row>
+                    <div className="col-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
+                        <Card>
+                            {activeItem && activeItem.url ? (
+                                <>
+                                    <Card.Img className="pixel-image" src={activeItem.url + `?id=${activeItem.id}`}/>
+                                    <Card.Body>
+                                        <Card.Title>
+                                            {activeItem.name}
+                                        </Card.Title>
+                                        <Card.Text>
+                                            {
+                                                displaySettings && displaySettings.brightness && (
+                                                    <span style={{whiteSpace: "pre-line"}}>
+                                                        {`${activeItem.size.width} x ${activeItem.size.height}\n`}
+                                                        {`Brightness: ${displaySettings.brightness * 100}\n`}
+                                                        {`FPS: ${displaySettings.fps}\n`}
+                                                        {`Duration: ${(activeItem.size.width / displaySettings.fps).toFixed(2)} seconds`}
+                                                    </span>
+                                                )
+                                            }
+                                        </Card.Text>
+                                        <Button onClick={() => updateModalShown(true)}>Change Display Settings</Button>
+                                    </Card.Body>
+                                </>
+                            ) : (
                                 <Card.Body>
                                     <Card.Title>
-                                        {activeItem.name}
+                                        No image selected...
                                     </Card.Title>
-                                    <Card.Text>
-                                        {
-                                            displaySettings && displaySettings.brightness && (
-                                                <span style={{whiteSpace: "pre-line"}}>
-                                                    {`${activeItem.size.width} x ${activeItem.size.height}\n`}
-                                                    {`Brightness: ${displaySettings.brightness * 100}\n`}
-                                                    {`FPS: ${displaySettings.fps}\n`}
-                                                    {`Duration: ${(activeItem.size.width / displaySettings.fps).toFixed(2)} seconds`}
-                                                </span>
-                                            )
-                                        }
-                                    </Card.Text>
-                                    <Button>Change Display Settings</Button>
                                 </Card.Body>
-                            </>
-                        ) : (
-                            <Card.Body>
-                                <Card.Title>
-                                    No image selected...
-                                </Card.Title>
-                            </Card.Body>
-                        )}
-                    </Card>
-                </div>
-            </Row>
-        </Container>
+                            )}
+                        </Card>
+                    </div>
+                </Row>
+            </Container>
+        </>
     )
 }
 
@@ -232,7 +308,7 @@ const ImageCards: FunctionComponent<{}> = () => {
     )
 }
 
-const resampleTypes = {
+const RESAMPLE_TYPES = {
     NEAREST: "Nearest Neighbor (Sharp Corners)",
     BICUBIC: "Bi-Cubic (Soft Corners)",
     BILINEAR: "Bi-Linear",
@@ -273,7 +349,7 @@ const SetActiveImageModal: FunctionComponent<{show: boolean, onHide: () => void,
                                 <Form.Group>
                                     <Form.Label>Resize Resampling</Form.Label>
                                     <Form.Select required id="resampling" defaultValue="NEAREST" value={resampling} onChange={ev => updateResampling(ev.target.value)}>
-                                        {Object.entries(resampleTypes).map(([id, prettyName]) => (
+                                        {Object.entries(RESAMPLE_TYPES).map(([id, prettyName]) => (
                                             <option value={id}>{prettyName}</option>
                                         ))}
                                     </Form.Select>
