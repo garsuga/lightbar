@@ -1,7 +1,7 @@
 import './App.scss';
 import React, { useRef, FunctionComponent } from 'react';
-import { Container, Card } from 'react-bootstrap';
-import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings } from './store';
+import { Container, Card, Button } from 'react-bootstrap';
+import { store, setImageStats, setLightbarSettings, selectImageStats, ImageStats, LightbarSettings, selectLightbarSettings, ImageStat, ActiveImageStat, setActiveItem, selectActiveItem } from './store';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
@@ -31,16 +31,27 @@ const fetchLightbarSettings = async () => {
     throw new Error(`Bad response ${response.status}: ${response.statusText}`)
 }
 
+const fetchActiveItem = async () => {
+    let response = await fetch("/active")
+    if(response.status === 200){
+        let activeStat = await response.json()
+        return activeStat as ActiveImageStat
+    }
+    throw new Error(`Bad response ${response.status}: ${response.statusText}`)
+}
+
 const Index: FunctionComponent<{}> = () => {
     const dispatch = useDispatch();
 
     useConstructor(() => {
         fetchImages().then(images => dispatch(setImageStats(images)));
         fetchLightbarSettings().then(lightbarSettings => dispatch(setLightbarSettings(lightbarSettings)));
+        fetchActiveItem().then(activeImageStat => dispatch(setActiveItem(activeImageStat)))
     })
 
     return (
         <Container className="app" fluid>
+            <ImageAndLightbarInfo/>
             <ImageCards/>
         </Container>
     )
@@ -59,6 +70,62 @@ export const App: FunctionComponent<{}> = () => {
             <RouterProvider router={router}/>
         </Provider>
     );
+}
+
+const ImageAndLightbarInfo: FunctionComponent<{}> = () => {
+    let lightbarSettings = useSelector(selectLightbarSettings);
+    let activeItem = useSelector(selectActiveItem);
+
+    return (
+        <div className="d-flex flew-row flex-wrap justify-content-center">
+            <Card>
+                <Card.Body>
+                    <Card.Title>
+                        Lightbar Info
+                    </Card.Title>
+                    <Card.Body>
+                        {lightbarSettings && lightbarSettings.devices ? (<>
+                            <span style={{whiteSpace: "pre-line"}}>
+                                {`Number of Devices: ${lightbarSettings.devices.length}\n`}
+                                {`Device Speed: ${lightbarSettings.speed} Hz\n`}
+                                {`Pixels / Device: ${lightbarSettings.numPixelsEach}\n`}
+                                {`Total Pixels: ${lightbarSettings.numPixels}`}
+                            </span>
+                        </>) : (<>
+                            Loading...
+                        </>)}
+                        
+                    </Card.Body>
+                </Card.Body>
+            </Card>
+
+            <Card>
+                {activeItem && activeItem.url ? (
+                    <>
+                        <Card.Img src={activeItem.url}/>
+                        <Card.Body>
+                            <Card.Title>
+                                Active Item: {activeItem.name}
+                            </Card.Title>
+                            <Card.Text>
+                                <span style={{whiteSpace: "pre-line"}}>
+                                    {`Brightness: ${activeItem.brightness}\n`}
+                                    {`FPS: ${activeItem.fps}`}
+                                </span>
+                            </Card.Text>
+                            <Button>Change Display Settings</Button>
+                        </Card.Body>
+                    </>
+                ) : (
+                    <Card.Body>
+                        <Card.Title>
+
+                        </Card.Title>
+                    </Card.Body>
+                )}
+            </Card>
+        </div>
+    )
 }
 
 const ImageCards: FunctionComponent<{}> = () => {

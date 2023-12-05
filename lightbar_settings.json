@@ -1,10 +1,10 @@
 {
-    "num_pixels": 288,
-    "num_pixels_each": 144,
-    "num_units": 2,
+    "numPixels": 288,
+    "numPixelsEach": 144,
+    "numUnits": 2,
     "devices": ["/dev/spidev0.0", "/dev/spidev1.0"],
     "speed": 500000,
-    "red_index": 0,
-    "green_index": 1,
-    "blue_index": 2
+    "redIndex": 0,
+    "greenIndex": 1,
+    "blueIndex": 2
 }

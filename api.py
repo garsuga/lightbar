@@ -140,7 +140,7 @@ def serve_pil_image(pil_img):
 # {
 #    resampling?: 'NEAREST' | 'BOX' | 'BILINEAR' | 'HAMMING' | 'BICUBIC' | 'LANCZOS'
 #    imageName: string,
-#    brightness: [0 ... 1]
+#    brightness: [0 ... 1],
 #    fps: [0 ... 30]
 # }
 @app.route("/active", methods=['GET', 'POST'])
@@ -158,12 +158,15 @@ def active_image():
         raw.save(ACTIVE_IMAGE_RAW_PATH)
         stats = _create_image_stat(encoded, ACTIVE_IMAGE_RAW_URL)
         stats['fps'] = fps
+        stats['name'] = image_name
         with open(ACTIVE_IMAGE_STAT_PATH, "w") as statsfile:
-            json.dump(stats, statsfile)
+            json.dump(stats, statsfile, indent=4)
         return "Image prepared"
     if request.method == "GET":
-        with open(ACTIVE_IMAGE_STAT_PATH, "r") as statsfile:
-            return jsonify(json.load(statsfile))
+        if os.path.isfile(ACTIVE_IMAGE_STAT_PATH):
+            with open(ACTIVE_IMAGE_STAT_PATH, "r") as statsfile:
+                return jsonify(json.load(statsfile))
+        return jsonify({})
     
     
 
