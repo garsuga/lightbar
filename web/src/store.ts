@@ -16,6 +16,7 @@ export type ImageStat = {
         width: number,
         height: number
     },
+    name: string,
     url: string
 }
 

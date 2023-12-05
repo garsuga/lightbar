@@ -2,3 +2,8 @@
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+.pixel-image {
+    image-rendering: -webkit-optimize-contrast; /* webkit */
+    image-rendering: -moz-crisp-edges /* Firefox */
+}

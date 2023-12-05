@@ -123,10 +123,10 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                     <Card>
                         {activeItem && activeItem.url ? (
                             <>
-                                <Card.Img src={activeItem.url}/>
+                                <Card.Img className="pixel-image" src={activeItem.url}/>
                                 <Card.Body>
                                     <Card.Title>
-                                        <b>Active Item</b>&emsp;{activeItem.name}
+                                        {activeItem.name}
                                     </Card.Title>
                                     <Card.Text>
                                         <span style={{whiteSpace: "pre-line"}}>
@@ -151,23 +151,35 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
     )
 }
 
+const calculateNewSize = (size: {width: number, height: number}, numPixels: number): {width: number, height: number} => {
+    let newWidth = Math.round(numPixels / size.height * size.width);
+    return {
+        width: newWidth,
+        height: numPixels
+    }
+}
+
 const ImageCards: FunctionComponent<{}> = () => {
     let images = useSelector(selectImageStats);
     let lightbarSettings = useSelector(selectLightbarSettings);
 
-    let imageElements = Object.entries(images).map(([name, stat]) => {
+    let imageElements = Object.entries(images).map(([id, stat]) => {
         let size = stat.original.size;
-        let color = lightbarSettings && lightbarSettings.numPixels ? (size.height == lightbarSettings.numPixels ? 'lime' : 'crimson') : undefined;
+        let needsResize = lightbarSettings && lightbarSettings.numPixels && size.height != lightbarSettings.numPixels;
+        let color = !needsResize ? 'lime' : 'crimson';
+        let newDims = needsResize ? calculateNewSize(size, lightbarSettings.numPixels) : size;
+        
         return (
             <div className="col-lg-4 col-xs-12" style={{marginTop: "1rem", marginBottom: "1rem"}}>
                 <Card>
-                    <Card.Img alt={name} src={stat.thumbnail.url}/>
+                    <Card.Img className="pixel-image" alt={id} src={stat.thumbnail.url}/>
                     <Card.Body>
                         <Card.Title>
-                            {name}
+                            {stat.original.name}
                         </Card.Title>
                         <Card.Text>
-                            <p className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</p>
+                            <span className="font-weight-bold" style={{color}}>{`${size.height} x ${size.width}`}</span>
+                            {needsResize && (<><span>&ensp;&#8594;&ensp;</span><span>{`${newDims.height} x ${newDims.width}`}</span></>)}
                         </Card.Text>
                     </Card.Body>
                 </Card>

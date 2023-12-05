@@ -89,21 +89,22 @@ def _get_lightbar_settings():
 def get_lightbar_settings():
     return jsonify(_get_lightbar_settings())
 
-def _get_image_stats(name):
-    stat_path = IMAGES_DIR / name / 'stats.json'
+def _get_image_stats(id):
+    stat_path = IMAGES_DIR / id / 'stats.json'
     with open(stat_path, 'r') as stat_file:
         return json.load(stat_file)
 
-def _get_image_original(name):
-    image_path = IMAGES_DIR / name / 'original.png'
+def _get_image_original(id):
+    image_path = IMAGES_DIR / id / 'original.png'
     return Image.open(image_path)
 
-def _create_image_stat(image, url):
+def _create_image_stat(image, name, url):
     return dict(
         size=dict(
             width=image.width, 
             height=image.height
         ),
+        name=name,
         url=str(url).replace('\\', '/')
     )
 
@@ -139,7 +140,7 @@ def serve_pil_image(pil_img):
 # prepare a saved image for lightbar and set it as active
 # {
 #    resampling?: 'NEAREST' | 'BOX' | 'BILINEAR' | 'HAMMING' | 'BICUBIC' | 'LANCZOS'
-#    imageName: string,
+#    imageId: string,
 #    brightness: [0 ... 1],
 #    fps: [0 ... 30]
 # }
@@ -151,14 +152,15 @@ def active_image():
         if fps > 30 or fps < 0:
             fps = 30
         resampling = body['resampling'] if 'resampling' in body else 'BICUBIC'
-        image_name = body['imageName']
+        image_id = body['imageId']
         brightness = body['brightness']
-        raw, encoded = format_image(image_name, resampling, brightness)
+        raw, encoded = format_image(image_id, resampling, brightness)
         encoded.save(ACTIVE_IMAGE_PATH)
         raw.save(ACTIVE_IMAGE_RAW_PATH)
-        stats = _create_image_stat(encoded, ACTIVE_IMAGE_RAW_URL)
+        old_stat = _get_image_stats(image_id)
+        stats = _create_image_stat(encoded, old_stat['name'], ACTIVE_IMAGE_RAW_URL)
         stats['fps'] = fps
-        stats['name'] = image_name
+        stats['id'] = image_id
         stats['brightness'] = brightness
         with open(ACTIVE_IMAGE_STAT_PATH, "w") as statsfile:
             json.dump(stats, statsfile, indent=4)
@@ -172,10 +174,10 @@ def active_image():
     
 
 
-def format_image(image_name, resampling, brightness):
+def format_image(image_id, resampling, brightness):
     resampling = Image.Resampling[resampling]
     settings = _get_lightbar_settings()
-    image = _get_image_original(image_name)
+    image = _get_image_original(image_id)
 
     new_height = settings['numPixels']
     new_width = round((new_height / image.height) * image.width)
@@ -194,10 +196,10 @@ def get_images():
 
     all_stats = dict()
 
-    for name in dirs:
-        path = IMAGES_DIR / name
+    for id in dirs:
+        path = IMAGES_DIR / id
         with open(path / 'stats.json') as stats_file:
-            all_stats[name] = json.load(stats_file)
+            all_stats[id] = json.load(stats_file)
     
     return jsonify(all_stats)
 
@@ -208,13 +210,14 @@ def upload_file():
         flash('No file part')
         return redirect(request.url)
     file = request.files['file']
+    name = request.form['name']
     if file.filename == '':
         flash('No selected file')
         return redirect(request.url)
     if file and allowed_image(file.filename):
-        name = Path(secure_filename(file.filename)).stem
+        id = Path(secure_filename(file.filename)).stem
         original = Image.open(file.stream)
-        out_dir = IMAGES_DIR / name
+        out_dir = IMAGES_DIR / id
         # TODO: conflict existing
         os.makedirs(out_dir, exist_ok=True)
         original = remove_transparency(original)
@@ -223,16 +226,16 @@ def upload_file():
         original_path = out_dir / 'original.png'
         thumbnail_path = out_dir / 'thumbnail.png'
 
-        original_url = IMAGES_URL / name / 'original.png'
-        thumbnail_url = IMAGES_URL / name / 'thumbnail.png'
+        original_url = IMAGES_URL / id / 'original.png'
+        thumbnail_url = IMAGES_URL / id / 'thumbnail.png'
 
         thumbnail.save(thumbnail_path, 'png')
         original.save(original_path, 'png')
 
         stats = json.dumps(
             dict(
-                original=_create_image_stat(original, original_url),
-                thumbnail=_create_image_stat(thumbnail, thumbnail_url)
+                original=_create_image_stat(original,  name, original_url),
+                thumbnail=_create_image_stat(thumbnail, name, thumbnail_url)
             ), indent=4)
         with open(out_dir / 'stats.json', "w") as statsfile:
             statsfile.write(stats)
