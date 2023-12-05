@@ -126,7 +126,7 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                                 <Card.Img src={activeItem.url}/>
                                 <Card.Body>
                                     <Card.Title>
-                                        Active Item: {activeItem.name}
+                                        <b>Active Item</b>&emsp;{activeItem.name}
                                     </Card.Title>
                                     <Card.Text>
                                         <span style={{whiteSpace: "pre-line"}}>
@@ -140,7 +140,7 @@ const ActiveImageInfo: FunctionComponent<{}> = () => {
                         ) : (
                             <Card.Body>
                                 <Card.Title>
-
+                                    No image selected...
                                 </Card.Title>
                             </Card.Body>
                         )}
