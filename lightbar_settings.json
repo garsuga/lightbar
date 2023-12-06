@@ -2,8 +2,8 @@
     "numPixels": 288,
     "numPixelsEach": 144,
     "numUnits": 2,
-    "devices": [[0, 0], [1, 0]],
-    "speed": 32000000,
+    "devices": [[0, 0, -1], [1, 0, 1]],
+    "speed": 12500000,
     "redIndex": 0,
     "greenIndex": 1,
     "blueIndex": 2

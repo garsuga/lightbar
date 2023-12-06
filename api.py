@@ -109,7 +109,8 @@ def display_on_ligthbar():
     lightbar_settings = _get_lightbar_settings()
     display_settings = _get_display_settings()
     lightbar = create_lightbar(lightbar_settings)
-    display_image(lightbar, ACTIVE_IMAGE_PATH, display_settings)
+    image = Image.open(ACTIVE_IMAGE_PATH)
+    display_image(lightbar, image, display_settings)
     return "Display started on lightbar"
 
 # Get display settings
