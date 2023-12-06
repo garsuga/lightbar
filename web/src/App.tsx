@@ -144,6 +144,8 @@ const LightbarNavbar: FunctionComponent<{}> = () => {
 
 const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => void}> = ({show, onHide}) => {
     let displaySettings = useSelector(selectDisplaySettings);
+    let activeImageStat = useSelector(selectActiveItem);
+
     let [brightness, updateBrightness] = useState<number>();
     let [fps, updateFps] = useState<number>();
     let dispatch = useDispatch();
@@ -171,6 +173,12 @@ const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => v
             })
         }).then(() => updateDisplaySettings(dispatch));
     }
+
+    let activeImageWidth = activeImageStat?.size?.width || 0;
+    let activeDuration = fps ? (activeImageWidth / fps) : 0;
+    let getFpsFromNewDuration = (dur: number) => {
+        return Math.round(activeImageWidth/dur);
+    }
     
     return (
         <Modal show={show} onHide={onHide}>
@@ -194,6 +202,13 @@ const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => v
                         </Form.Label>
                         <Form.Range min="1" max="300" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
                         <Form.Label>{fps}</Form.Label>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Label>
+                            Time (sec)
+                        </Form.Label>
+                        <Form.Range min={Math.cbrt(activeImageWidth/300)} max={Math.cbrt(activeImageWidth)} step={0.01} value={Math.cbrt(activeDuration)} onChange={ev => updateFps(getFpsFromNewDuration(parseFloat(ev.target.value)**3))}/>
+                        <Form.Label>{activeDuration.toFixed(2)}</Form.Label>
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
