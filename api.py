@@ -64,10 +64,13 @@ app = Flask(__name__, static_folder='web/build')
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
+    r = None
     if path != "" and os.path.exists(app.static_folder + '/' + path):
-        return send_from_directory(app.static_folder, path)
+        r = send_from_directory(app.static_folder, path)
     else:
-        return send_from_directory(app.static_folder, 'index.html')
+        r = send_from_directory(app.static_folder, 'index.html')
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return r
 
 # Serve Static Files (/data/<path:path>)
 @app.route('/' + str(DATA_DIR).replace("\\", "/") + '/<path:path>')
