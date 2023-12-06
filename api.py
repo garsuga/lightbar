@@ -69,7 +69,8 @@ def index(path):
         r = send_from_directory(app.static_folder, path)
     else:
         r = send_from_directory(app.static_folder, 'index.html')
-    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    if os.environ['ENV'] == 'dev':
+        r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return r
 
 # Serve Static Files (/data/<path:path>)
