@@ -69,7 +69,7 @@ def index(path):
         r = send_from_directory(app.static_folder, path)
     else:
         r = send_from_directory(app.static_folder, 'index.html')
-    if os.environ['ENV'] == 'dev':
+    if 'ENV' in os.environ and os.environ['ENV'] == 'dev':
         r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return r
 
