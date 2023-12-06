@@ -104,6 +104,18 @@ export const App: FunctionComponent<{}> = () => {
 const LightbarNavbar: FunctionComponent<{}> = () => {
     let lightbarSettings = useSelector(selectLightbarSettings);
 
+    let formatSpeed = (speed: number) => {
+        debugger;
+        let units = ["Hz", "KHz", "MHz", "GHz"]
+        let ui = 0
+        while(speed > 1000) {
+            speed /= 1000;
+            ui += 1
+        }
+
+        return `${speed} ${units[ui]}`
+    }
+
     return (
         <>
             <Navbar className="bg-body-tertiary" sticky='top'>
@@ -115,7 +127,7 @@ const LightbarNavbar: FunctionComponent<{}> = () => {
                         lightbarSettings && lightbarSettings.devices ? (
                             <>
                                 <Navbar.Text>
-                                    {lightbarSettings.numPixels} px&emsp;{lightbarSettings.numUnits} strips&emsp;{lightbarSettings.speed} Hz
+                                    {lightbarSettings.numPixels} px&emsp;{lightbarSettings.numUnits} strips&emsp;{formatSpeed(lightbarSettings.speed)}
                                 </Navbar.Text>
                             </>
                         ) : (
@@ -180,7 +192,7 @@ const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => v
                         <Form.Label>
                             FPS
                         </Form.Label>
-                        <Form.Range min="1" max="30" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
+                        <Form.Range min="1" max="300" step="1" value={fps} onChange={ev => updateFps(Math.round(parseFloat(ev.target.value)))}/>
                         <Form.Label>{fps}</Form.Label>
                     </Form.Group>
                 </Modal.Body>
