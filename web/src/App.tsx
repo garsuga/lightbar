@@ -261,11 +261,46 @@ const calculateNewSize = (size: {width: number, height: number}, numPixels: numb
     }
 }
 
+const UploadImageModal: FunctionComponent<{show: boolean, onHide: () => void}> = ({show, onHide}) => {
+    let submitForm = () => {
+
+    }
+
+    return (
+        <Modal show={show} onHide={onHide}>
+            <Form>
+                <Modal.Header>
+                    <Modal.Title>
+                        Upload Image
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Group>
+                        <Form.Control required type="file" onChange={ev => {console.log(ev)}}/>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => onHide()}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={() => {
+                        onHide();
+                        submitForm();
+                    }}>
+                        Upload
+                    </Button>
+                </Modal.Footer>
+            </Form>
+        </Modal>
+    )
+}
+
 const ImageCards: FunctionComponent<{}> = () => {
     let images = useSelector(selectImageStats);
     let lightbarSettings = useSelector(selectLightbarSettings);
 
     let [selectedImage, updateSelectedImage] = useState<string | undefined>(undefined);
+    let [uploadModalShown, updateUploadModalShown] = useState<boolean>(false);
 
     let imageElements = Object.entries(images).sort(([aId, aValue], [bId, bValue]) => aValue.original.name.localeCompare(bValue.original.name)).map(([id, stat]) => {
         let size = stat.original.size;
@@ -295,11 +330,13 @@ const ImageCards: FunctionComponent<{}> = () => {
 
     return (
         <>
+            <UploadImageModal show={uploadModalShown} onHide={() => updateUploadModalShown(false)}/>
             <Container className="col-lg-6 col-xs-12 gx-5" fluid>
                 <Row>
-                    <h3 className="col-12">
+                    <h3 className="col-6">
                         Saved Images
                     </h3>
+                    <Button className="col-6" onClick={() => updateUploadModalShown(true)}>Upload</Button>
                 </Row>
                 <Row>
                     {imageElements}
