@@ -2,8 +2,8 @@
     "numPixels": 288,
     "numPixelsEach": 144,
     "numUnits": 2,
-    "devices": ["/dev/spidev0.0", "/dev/spidev1.0"],
-    "speed": 500000,
+    "devices": [[0, 0], [1, 0]],
+    "speed": 32000000,
     "redIndex": 0,
     "greenIndex": 1,
     "blueIndex": 2

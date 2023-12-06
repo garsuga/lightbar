@@ -147,12 +147,7 @@ Python comes installed on Raspbian
 ```bash
 pip install RPi.GPIO
 pip install flask
-```
-Install [SPI-Py](https://github.com/lthiery/SPI-Py)
-```bash
-git clone https://github.com/lthiery/SPI-Py
-cd SPI-Py
-sudo python setup.py install
+pip install spidev
 ```
 ## Install Node.js
 Search [Node.js unofficial builds](https://unofficial-builds.nodejs.org/download/release/) for an ARM-61 build of Node.js

@@ -1,6 +1,7 @@
 import RPi.GPIO as GPIO
 import time
-import spi
+#import spi
+import spidev
 from PIL import Image
 from functools import reduce
 import numpy as np
@@ -12,9 +13,10 @@ def _format_transfer(image_arr_slice):
     b = [*start, *image_arr_slice, *end]
     return b
 
-def _show_spi(pixels, device):
-    b = _format_transfer(pixels)
-    spi.transfer(device, tuple(b))
+def _show_spi(bytes, device):
+    #b = _format_transfer(pixels)
+    #spi.transfer(device, tuple(b))
+    device.writebytes(bytes)
 
 def BLACK(size):
     return [0xFF, 0x00, 0x00, 0x00] * size
@@ -34,6 +36,9 @@ class Lightbar:
     def display(self, pixels):
         raise "Unimplemented"
     
+    def prepare(self, slices):
+        raise "Unimplemented"
+    
 class SingleLightbar(Lightbar):
     def __init__(self, size, spidev):
         super().__init__(size)
@@ -41,6 +46,9 @@ class SingleLightbar(Lightbar):
     
     def display(self, pixels):
         _show_spi(pixels, self.spidev)
+    
+    def prepare(self, slices):
+        return list(map(lambda s: _format_transfer(s), slices))
 
 class CombinedLightbar(Lightbar):
     def __init__(self, spidevs):
@@ -49,11 +57,20 @@ class CombinedLightbar(Lightbar):
         super().__init__(size)
     
     def display(self, pixels):
-        i = 0
-        for spidev in self.spidevs:
-            spi, l = spidev
-            _show_spi(pixels[i*4:i*4+l*4], spi)
-            i += l
+        for i in range(0, len(pixels)):
+            _show_spi(pixels[i], self.spidevs[i][0])
+
+    def prepare(self, slices):
+        for slice_num in range(0, len(slices)):
+            slice = slices[slice_num]
+            i = 0
+            parts = [[]] * len(self.spidevs)
+            for dev_num, spidev in enumerate(self.spidevs):
+                spi, l = spidev
+                parts[dev_num] = _format_transfer(slice[i*4:i*4+l*4])
+                i += l
+            slices[slice_num] = parts
+        return slices
 
 def format_image_for_output(image):
     image_arr = np.asarray(image)
@@ -64,7 +81,13 @@ def format_image_for_output(image):
     return image_arr.tolist()
 
 def create_lightbar(settings):
-    devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
+    def make_lightbar_part(dev):
+        spi = spidev.SpiDev()
+        spi.open(dev[0], dev[1])
+        spi.max_speed_hz = settings['speed']
+        return spi
+    devices = map(make_lightbar_part, settings['devices'])
+    #devices = list(map(lambda dev: spi.openSPI(device=dev, speed=settings['speed']), settings['devices']))
     return CombinedLightbar([(device, settings['numPixelsEach']) for device in devices])
 
 
@@ -104,25 +127,27 @@ def _display_image(lightbar, image_path, display_settings):
     print("intended fps", fps)
     
     
-def calculate_fps(lightbar, N=600):
-    test_image = Image.new("RGBA", (N, lightbar.size), (255, 0, 0, 0))
+def calculate_fps(lightbar, N=600, N2=None):
+    if N2 is None:
+        N2 = N//4
+    test_image = Image.new("RGBA", (lightbar.size, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    for i in range(0, N):
-        pa[i, i % lightbar.size] = (255, 0, 0, 255)
+    for i in range(0, lightbar.size):
+        pa[i, i] = (255, 0, 0, 255)
     test_image.save("./test.png")
 
     image_arr = format_image_for_output(test_image)
-
-    slices = len(image_arr)
+    image_arr = lightbar.prepare(image_arr)
     
     image_start = time.time()
 
-    for i in range(0, slices):
-        lightbar.display(image_arr[i])
-        if i == slices//2:
+    for i in range(0, N):
+        #t = time.time()
+        lightbar.display(image_arr[i % lightbar.size])
+        if i%N2 == 0 and i > 0:
             elapsed_time = time.time() - image_start
             fps = i / elapsed_time
-            print(f"half: {fps} fps")
+            print(f"N={i}: {fps} fps")
 
 
     elapsed_time = time.time() - image_start
@@ -135,6 +160,10 @@ if __name__ == "__main__":
     from api import _get_lightbar_settings
     settings = _get_lightbar_settings()
     lightbar = create_lightbar(settings)
-    N = 600
-    calculate_fps(lightbar, N)
-    lightbar.display(BLACK(lightbar.size))
+    #spi = spidev.SpiDev()
+    #spi.open(0, 0)
+    #spi.max_speed_hz = 500000
+    #lightbar = SingleLightbar(144, spi)
+    calculate_fps(lightbar, 1500, 100)
+    lightbar.display(lightbar.prepare([BLACK(lightbar.size)])[0])
+    #spi.close()
