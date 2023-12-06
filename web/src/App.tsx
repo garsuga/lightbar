@@ -280,6 +280,8 @@ const UploadImageModal: FunctionComponent<{show: boolean, onHide: () => void}> =
         })
     }
 
+    let fileNamePat = /.*\/(.+?)\..*/
+
     return (
         <Modal show={show} onHide={onHide}>
             <Form>
@@ -290,11 +292,18 @@ const UploadImageModal: FunctionComponent<{show: boolean, onHide: () => void}> =
                 </Modal.Header>
                 <Modal.Body>
                     <Form.Group>
-                        <Form.Label>Name</Form.Label>
-                        <Form.Control required onChange={ev => updateName(ev.target.value)}></Form.Control>
+                        <Form.Control required type="file" onChange={ev => {
+                            updateFile((ev as any).target.files[0])
+                            if(!name){
+                                let path = (ev.target.value as string).replace(/\\/gi, "/")
+                                let res = fileNamePat.exec(path) as string[]
+                                updateName(res[1]);
+                            }
+                        }}/>
                     </Form.Group>
                     <Form.Group>
-                        <Form.Control required type="file" onChange={ev => updateFile((ev as any).target.files[0])}/>
+                        <Form.Label>Name</Form.Label>
+                        <Form.Control value={name} required onChange={ev => updateName(ev.target.value)}></Form.Control>
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
