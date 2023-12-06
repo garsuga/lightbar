@@ -164,6 +164,14 @@ def _gen_rainbow_static(lightbar, width=None):
             pa[i, j] = color_arr[j]
     return test_image
 
+
+def _gen_black_white(lightbar, width=2):
+    test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
+    pa = test_image.load()
+    for i in range(0, width, 2):
+        for j in range(0, lightbar.size):
+            pa[i, j] = (255,255,255,255)
+    return test_image
     
 def calculate_fps(lightbar, N=600, N2=None, image=None):
     if N2 is None:
