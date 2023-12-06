@@ -207,7 +207,7 @@ const SetDisplaySettingsModal: FunctionComponent<{show: boolean, onHide: () => v
                         <Form.Label>
                             Time (sec)
                         </Form.Label>
-                        <Form.Range min={Math.cbrt(activeImageWidth/300)} max={Math.cbrt(activeImageWidth)} step={0.01} value={Math.cbrt(activeDuration)} onChange={ev => updateFps(getFpsFromNewDuration(parseFloat(ev.target.value)**3))}/>
+                        <Form.Range min={Math.log(activeImageWidth/300)} max={Math.log(activeImageWidth)} step={0.01} value={Math.log(activeDuration)} onChange={ev => updateFps(getFpsFromNewDuration(Math.exp(parseFloat(ev.target.value))))}/>
                         <Form.Label>{activeDuration.toFixed(2)}</Form.Label>
                     </Form.Group>
                 </Modal.Body>
