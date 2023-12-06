@@ -262,8 +262,22 @@ const calculateNewSize = (size: {width: number, height: number}, numPixels: numb
 }
 
 const UploadImageModal: FunctionComponent<{show: boolean, onHide: () => void}> = ({show, onHide}) => {
-    let submitForm = () => {
+    let [name, updateName] = useState<string | undefined>(undefined);
+    let [file, updateFile] = useState<File | undefined>(undefined);
+    let dispatch = useDispatch()
 
+    let valid = !!name && name.trim().length > 0 && !!file;
+
+    let submitForm = () => {
+        let data = new FormData();
+        data.append("file", file as File);
+        data.append("name", name as string);
+        fetch("/upload-image", {
+            method: "POST",
+            body: data
+        }).then(() => {
+            updateImages(dispatch)
+        })
     }
 
     return (
@@ -276,14 +290,18 @@ const UploadImageModal: FunctionComponent<{show: boolean, onHide: () => void}> =
                 </Modal.Header>
                 <Modal.Body>
                     <Form.Group>
-                        <Form.Control required type="file" onChange={ev => {console.log(ev)}}/>
+                        <Form.Label>Name</Form.Label>
+                        <Form.Control required onChange={ev => updateName(ev.target.value)}></Form.Control>
+                    </Form.Group>
+                    <Form.Group>
+                        <Form.Control required type="file" onChange={ev => updateFile((ev as any).target.files[0])}/>
                     </Form.Group>
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => onHide()}>
                         Cancel
                     </Button>
-                    <Button variant="primary" onClick={() => {
+                    <Button disabled={!valid} variant="primary" onClick={() => {
                         onHide();
                         submitForm();
                     }}>

@@ -49,9 +49,9 @@ def crop_square(image):
     if image.height > image.width:
         mid = image.height / 2
         return image.crop((0, 
-                           math.ceil(mid + image.width / 2), 
+                           math.ceil(mid - image.width / 2), 
                            image.width, 
-                           math.ceil(mid - image.width / 2)))
+                           math.ceil(mid + image.width / 2)))
     mid = image.width / 2
     return image.crop((math.ceil(mid - image.height / 2), 
                        0, 
@@ -264,7 +264,6 @@ def upload_file():
         id = Path(secure_filename(file.filename)).stem
         original = Image.open(file.stream)
         out_dir = IMAGES_DIR / id
-        # TODO: conflict existing
         os.makedirs(out_dir, exist_ok=True)
         original = remove_transparency(original)
         thumbnail = crop_square(original)
