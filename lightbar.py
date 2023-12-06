@@ -165,10 +165,12 @@ def _gen_rainbow_static(lightbar, width=None):
     return test_image
 
 
-def _gen_black_white(lightbar, width=2):
+def _gen_black_white(lightbar, width=None, gap=4):
+    if width is None:
+        width = gap + 2
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    for i in range(0, width, 2):
+    for i in range(0, width, gap):
         for j in range(0, lightbar.size):
             pa[i, j] = (255,255,255,255)
     return test_image
@@ -205,10 +207,10 @@ if __name__ == "__main__":
     settings = _get_lightbar_settings()
     lightbar = create_lightbar(settings)
 
-    fps = 300
+    fps = 60
     #calculate_fps(lightbar, 1000, 100, _gen_rainbow())
 
-    display_image(lightbar, _gen_single_pixel_motion(lightbar, fps * 10), dict(
+    display_image(lightbar, _gen_black_white(lightbar, fps * 5), dict(
         brightness=1,
         fps=fps
     ))
