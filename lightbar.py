@@ -159,7 +159,7 @@ def _gen_rainbow(lightbar, width=None, brightness=1):
         width = lightbar.size
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    color_arr = [(255, *map(lambda x: int(round(x * brightness * 255)), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    color_arr = [(255, *map(lambda x: _gamma_correct(int(round(x * brightness * 255))), reversed(colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1)))) for i in range(0, lightbar.size)]
     print(color_arr)
     for i in range(0, width):
         for j in range(0, lightbar.size):
@@ -171,7 +171,7 @@ def _gen_rainbow_static(lightbar, width=None, brightness=1):
         width = lightbar.size
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    color_arr = [(255, *map(lambda x: _gamma_correct(int(round(x * brightness * 255))), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    color_arr = [(255, *map(lambda x: _gamma_correct(int(round(x * brightness * 255))), reversed(colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1)))) for i in range(0, lightbar.size)]
     print(color_arr)
     for i in range(0, width):
         for j in range(0, lightbar.size):
@@ -219,11 +219,11 @@ def calculate_fps(lightbar, N=600, N2=None, image=None):
 if __name__ == "__main__":
     from api import _get_lightbar_settings
     settings = _get_lightbar_settings()
-    #lightbar = create_lightbar(settings)
+    lightbar = create_lightbar(settings)
     spi = spidev.SpiDev()
     spi.open(0,0)
     spi.max_speed_hz = settings['speed']
-    lightbar = SingleLightbar(144, spi)
+    #lightbar = SingleLightbar(144, spi)
 
     fps = 60
     #calculate_fps(lightbar, 1000, 100, _gen_rainbow())
