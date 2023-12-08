@@ -26,7 +26,7 @@ The SPI busses on the PI Zero 2 W run at 500kHz max. This speed can be found by 
 
 # Each pixel for N pixels on strip (ex: 144)
 # Observe that colors are not in order
-1 byte brightness (CANNOT BE 0)*
+0xFF
 1 byte blue
 1 byte green
 1 byte red
