@@ -154,13 +154,6 @@ def _create_image_stat(image, name, url):
         url=str(url).replace('\\', '/')
     )
 
-# https://github.com/adafruit/Adafruit_CircuitPython_DotStar/issues/21#issue-323774759
-GAMMA_CORRECT_FACTOR = 2.5
-def _gamma_correct(led_val):
-    max_val = (1 << 8) - 1.0
-    corrected = pow(led_val / max_val, GAMMA_CORRECT_FACTOR) * max_val
-    return int(min(255, max(0, corrected)))
-
 # TODO
 # TODO implement gamma correction
 # TODO
@@ -170,10 +163,10 @@ def _encode_pixels(image, settings, brightness):
     image = image.convert('RGBA')
     r,g,b,a = image.split()
     new_channels = [None, None, None, None]
-    new_channels[0] = Image.new('L', image.size, math.ceil(brightness * 255))
-    new_channels[settings['redIndex'] + 1] = r
-    new_channels[settings['greenIndex'] + 1] = g
-    new_channels[settings['blueIndex'] + 1] = b
+    new_channels[0] = Image.new('L', image.size, 255)
+    new_channels[settings['redIndex'] + 1] = int(math.ceil(r * brightness))
+    new_channels[settings['greenIndex'] + 1] = int(math.ceil(g * brightness))
+    new_channels[settings['blueIndex'] + 1] = int(math.ceil(b * brightness))
     return Image.merge("RGBA", new_channels)
 
 # https://stackoverflow.com/questions/7877282/how-to-send-image-generated-by-pil-to-browser

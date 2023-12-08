@@ -1,3 +1,4 @@
+import math
 import RPi.GPIO as GPIO
 import time
 #import spi
@@ -7,6 +8,12 @@ from functools import reduce
 import numpy as np
 import colorsys
 
+# https://github.com/adafruit/Adafruit_CircuitPython_DotStar/issues/21#issue-323774759
+GAMMA_CORRECT_FACTOR = 2.5
+def _gamma_correct(led_val):
+    max_val = (1 << 8) - 1.0
+    corrected = pow(led_val / max_val, GAMMA_CORRECT_FACTOR) * max_val
+    return int(min(255, max(0, corrected)))
 
 def _format_transfer(image_arr_slice):
     start = [0x00, 0x00, 0x00, 0x00]
@@ -67,15 +74,17 @@ class CombinedLightbar(Lightbar):
             parts = [[]] * len(self.spidevs)
             for dev_num, spidev in enumerate(self.spidevs):
                 spi, l, direction = spidev
-                part = slice[i*4:i*4+l*4]
+                part = slice[i*4:(i+l)*4]
                 if direction < 1:
                     part = list(reversed(part))
                     for begin in range(0, len(part)//4):
                         part[begin*4:begin*4+4] = reversed(part[begin*4:begin*4+4])
 
+                #print(f"i={i}, direction={direction}, part=", part)
                 parts[dev_num] = _format_transfer(part)
                 i += l
             slices[slice_num] = parts
+            #return
         return slices
 
 def format_image_for_output(image):
@@ -99,11 +108,11 @@ def create_lightbar(settings):
 def turn_off_lightbar(lightbar):
     lightbar.display(BLACK(lightbar.size))
 
-def display_image(lightbar, image, display_settings):
+def display_image(lightbar, image, display_settings, repeat=0):
     # TODO: Threading
-    _display_image(lightbar, image, display_settings)
+    _display_image(lightbar, image, display_settings, repeat)
 
-def _display_image(lightbar, image, display_settings):
+def _display_image(lightbar, image, display_settings, repeat=0):
     fps = display_settings['fps']
 
     frame_length = 1 / fps
@@ -115,16 +124,19 @@ def _display_image(lightbar, image, display_settings):
 
     slices = len(image_arr)
     
+    repeat += 1
+
     image_start = time.time()
 
-    for i in range(0, slices):
-        frame_start = time.time()
-        lightbar.display(image_arr[i])
-        frame_end = time.time()
-        time.sleep(max(0, frame_length - (frame_end - frame_start)))
+    for r in range(0, repeat):
+        for i in range(0, slices):
+            frame_start = time.time()
+            lightbar.display(image_arr[i])
+            frame_end = time.time()
+            time.sleep(max(0, frame_length - (frame_end - frame_start)))
 
     elapsed_time = time.time() - image_start
-    intended_time = slices / fps
+    intended_time = slices * repeat / fps
 
     actual_fps = slices / elapsed_time
     
@@ -133,46 +145,48 @@ def _display_image(lightbar, image, display_settings):
     print("actual fps", actual_fps)
     print("intended fps", fps)
     
-def _gen_single_pixel_motion(lightbar, width=None):
+def _gen_single_pixel_motion(lightbar, width=None, brightness=1):
     if width is None:
         width = lightbar.size
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
     for i in range(0, width):
-        pa[i, i % lightbar.size] = (255, 0, 0, 255)
+        pa[i, i % lightbar.size] = (255, 0, 0, int(math.ceil(255 * brightness)))
     return test_image
 
-def _gen_rainbow(lightbar, width=None):
+def _gen_rainbow(lightbar, width=None, brightness=1):
     if width is None:
         width = lightbar.size
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    color_arr = [(255, *map(lambda x: int(round(x * 255)), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    color_arr = [(255, *map(lambda x: int(round(x * brightness * 255)), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    print(color_arr)
     for i in range(0, width):
         for j in range(0, lightbar.size):
             pa[i, j] = color_arr[(i+j)%lightbar.size]
     return test_image
 
-def _gen_rainbow_static(lightbar, width=None):
+def _gen_rainbow_static(lightbar, width=None, brightness=1):
     if width is None:
         width = lightbar.size
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
-    color_arr = [(255, *map(lambda x: int(round(x * 255)), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    color_arr = [(255, *map(lambda x: _gamma_correct(int(round(x * brightness * 255))), colorsys.hsv_to_rgb((1/lightbar.size) * i, 1, 1))) for i in range(0, lightbar.size)]
+    print(color_arr)
     for i in range(0, width):
         for j in range(0, lightbar.size):
             pa[i, j] = color_arr[j]
     return test_image
 
 
-def _gen_black_white(lightbar, width=None, gap=4):
+def _gen_black_white(lightbar, width=None, brightness=1, gap=4):
     if width is None:
         width = gap + 2
     test_image = Image.new("RGBA", (width, lightbar.size), (255, 0, 0, 0))
     pa = test_image.load()
     for i in range(0, width, gap):
         for j in range(0, lightbar.size):
-            pa[i, j] = (255,255,255,255)
+            pa[i, j] = (255,int(math.ceil(255 * brightness)),int(math.ceil(255 * brightness)),int(math.ceil(255 * brightness)))
     return test_image
     
 def calculate_fps(lightbar, N=600, N2=None, image=None):
@@ -205,13 +219,22 @@ def calculate_fps(lightbar, N=600, N2=None, image=None):
 if __name__ == "__main__":
     from api import _get_lightbar_settings
     settings = _get_lightbar_settings()
-    lightbar = create_lightbar(settings)
+    #lightbar = create_lightbar(settings)
+    spi = spidev.SpiDev()
+    spi.open(0,0)
+    spi.max_speed_hz = settings['speed']
+    lightbar = SingleLightbar(144, spi)
 
     fps = 60
     #calculate_fps(lightbar, 1000, 100, _gen_rainbow())
 
-    display_image(lightbar, _gen_black_white(lightbar, fps * 5), dict(
-        brightness=1,
+    img = _gen_rainbow_static(lightbar, width=lightbar.size, brightness=.5)
+    img.save("temp.png")
+    a, b, g, r = img.split()
+    Image.merge("RGBA", [r, g, b, a]).save("temp2.png")
+
+    display_image(lightbar, img, dict(
+        brightness=.25,
         fps=fps
-    ))
+    ), repeat=20)
     lightbar.display(lightbar.prepare([BLACK(lightbar.size)])[0])
